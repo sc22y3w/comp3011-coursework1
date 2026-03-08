@@ -16,7 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from pokemon_app.views_api import pokemon_api
+from pokemon_app.views_frontend import pokemon_page
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/pokemon/', pokemon_api, name='pokemon_api'),
+    path('pokemon/', pokemon_page, name='pokemon_page'),
 ]
