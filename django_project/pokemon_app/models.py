@@ -44,4 +44,16 @@ class Pokemon(models.Model):
 
     def __str__(self):
         return self.name
-      
+
+
+class PokemonTeam(models.Model):
+    name = models.CharField(max_length=100)
+    pokemon_1 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_1')
+    pokemon_2 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_2')
+    pokemon_3 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_3')
+    pokemon_4 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_4')
+    pokemon_5 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_5')
+    pokemon_6 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_6')
+
+    def __str__(self):
+        return self.name
