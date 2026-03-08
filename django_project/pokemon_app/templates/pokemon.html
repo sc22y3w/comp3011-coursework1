@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Pokémon List{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Pokémon List</h1>
+
+<div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search Pokémon by name...">
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover" id="pokemonTable">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Types</th>
+                <th>Abilities</th>
+                <th>HP</th>
+                <th>Attack</th>
+                <th>Defense</th>
+                <th>Sp. Atk</th>
+                <th>Sp. Def</th>
+                <th>Speed</th>
+            </tr>
+        </thead>
+        <tbody id="pokemonTableBody">
+            <tr>
+                <td colspan="10" class="text-center">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let allPokemon = [];
+
+        fetch('/api/pokemon/')
+            .then(response => response.json())
+            .then(data => {
+                allPokemon = data.pokemon;
+                renderTable(allPokemon);
+            })
+            .catch(error => {
+                document.getElementById('pokemonTableBody').innerHTML =
+                    '<tr><td colspan="10" class="text-center text-danger">Failed to load Pokémon data.</td></tr>';
+                console.error('Error fetching Pokémon:', error);
+            });
+
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+            const filtered = allPokemon.filter(p => p.name.toLowerCase().includes(query));
+            renderTable(filtered);
+        });
+
+        function renderTable(pokemonList) {
+            const tbody = document.getElementById('pokemonTableBody');
+            if (pokemonList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No Pokémon found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = pokemonList.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.name}</td>
+                    <td>${p.types.join(', ')}</td>
+                    <td>${p.abilities.join(', ')}</td>
+                    <td>${p.hp}</td>
+                    <td>${p.attack}</td>
+                    <td>${p.defense}</td>
+                    <td>${p.special_attack}</td>
+                    <td>${p.special_defense}</td>
+                    <td>${p.speed}</td>
+                </tr>
+            `).join('');
+        }
+    });
+</script>
+{% endblock %}
