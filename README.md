@@ -181,6 +181,73 @@ Returns a list of all Pokémon teams and their members.
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
 | `500 Internal Server Error` | An unexpected server error occurred |
 
+### Edit a Pokémon Team
+
+```
+PUT /api/team/<id>/edit/
+```
+
+Updates an existing Pokémon team's name and members.
+
+#### Request Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "name": string,
+  "pokemon_1": int,
+  "pokemon_2": int,
+  "pokemon_3": int,
+  "pokemon_4": int,
+  "pokemon_5": int,
+  "pokemon_6": int
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Unique name for the team |
+| `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
+| `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
+| `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |
+| `pokemon_4` | integer | Yes | ID of the 4th Pokémon |
+| `pokemon_5` | integer | Yes | ID of the 5th Pokémon |
+| `pokemon_6` | integer | Yes | ID of the 6th Pokémon |
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "message": "Team updated successfully"
+}
+```
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Team successfully updated | `{"message": "Team updated successfully"}` |
+| `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
+| `404 Not Found` | Team or referenced Pokémon ID does not exist | `{"error": "<message>"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `PUT` is supported) | Empty |
+| `409 Conflict` | Another team with the given name already exists | `{"error": "A team with this name already exists"}` |
+| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+
+#### Error Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "error": string
+}
+```
+
 ## Pages
 
 | Route | Description |
@@ -188,4 +255,5 @@ Returns a list of all Pokémon teams and their members.
 | `/pokemon/` | Web page displaying all Pokémon in a searchable table |
 | `/teams/` | Web page displaying all created Pokémon teams |
 | `/team/create/` | Web page for creating a new Pokémon team |
+| `/team/<id>/edit/` | Web page for editing an existing Pokémon team |
 | `/admin/` | Django admin panel |

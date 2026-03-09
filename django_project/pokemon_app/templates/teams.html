@@ -40,6 +40,7 @@
                     html += `</div></div>
                         <div class="card-footer">
                             <a href="/team/${team.id}/edit/" class="btn btn-sm btn-outline-primary">Edit Team</a>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteTeam(${team.id}, '${team.name.replace(/'/g, "\\'")}')">Delete Team</button>
                         </div></div>`;
                 });
                 container.innerHTML = html;
@@ -48,5 +49,44 @@
                 container.innerHTML = '<div class="alert alert-danger">Failed to load teams.</div>';
             });
     });
+
+    function deleteTeam(teamId, teamName) {
+        if (!confirm(`Are you sure you want to delete the team "${teamName}"?`)) return;
+
+        const alertContainer = document.getElementById('alertContainer');
+        alertContainer.innerHTML = '';
+
+        fetch(`/api/team/${teamId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                return response.json().then(data => {
+                    alertContainer.innerHTML =
+                        `<div class="alert alert-danger">${data.error || 'Failed to delete team.'}</div>`;
+                });
+            }
+        })
+        .catch(() => {
+            alertContainer.innerHTML =
+                '<div class="alert alert-danger">Network error. Please try again.</div>';
+        });
+    }
+
+    function getCookie(name) {
+        const cookies = document.cookie.split(';');
+        for (let c of cookies) {
+            c = c.trim();
+            if (c.startsWith(name + '=')) {
+                return decodeURIComponent(c.substring(name.length + 1));
+            }
+        }
+        return '';
+    }
 </script>
 {% endblock %}

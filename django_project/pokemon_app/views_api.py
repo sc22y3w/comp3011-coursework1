@@ -142,3 +142,15 @@ def edit_team_api(request, team_id):
     team.save()
 
     return JsonResponse({'message': 'Team updated successfully'})
+
+
+@require_http_methods(["DELETE"])
+def delete_team_api(request, team_id):
+    """API endpoint to delete a PokemonTeam."""
+    try:
+        team = PokemonTeam.objects.get(id=team_id)
+    except PokemonTeam.DoesNotExist:
+        return JsonResponse({'error': 'Team not found'}, status=404)
+
+    team.delete()
+    return JsonResponse({'message': 'Team deleted successfully'})
