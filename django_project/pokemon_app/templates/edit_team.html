@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Team{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Edit Pokémon Team</h1>
+
+<div id="alertContainer"></div>
+
+<form id="editTeamForm">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="teamName" class="form-label">Team Name</label>
+        <input type="text" class="form-control" id="teamName" required>
+    </div>
+
+    <div class="row">
+        {% for i in slots %}
+        <div class="col-md-4 mb-3">
+            <label for="pokemon_{{ i }}" class="form-label">Pokémon {{ i }}</label>
+            <select class="form-select pokemon-select" id="pokemon_{{ i }}" required>
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        {% endfor %}
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submitBtn">Save Changes</button>
+    <a href="/teams/" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const teamId = {{ team_id }};
+        const selects = document.querySelectorAll('.pokemon-select');
+
+        // Load pokemon list and then load team data to pre-select values
+        fetch('/api/pokemon/')
+            .then(response => response.json())
+            .then(data => {
+                const pokemon = data.pokemon;
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="">-- Select --</option>';
+                    pokemon.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = `${p.name} (${p.types.join(', ')})`;
+                        select.appendChild(opt);
+                    });
+                });
+
+                // Now load the team data and pre-fill the form
+                return fetch('/api/teams/');
+            })
+            .then(response => response.json())
+            .then(data => {
+                const team = data.teams.find(t => t.id === teamId);
+                if (!team) {
+                    document.getElementById('alertContainer').innerHTML =
+                        '<div class="alert alert-danger">Team not found.</div>';
+                    return;
+                }
+                document.getElementById('teamName').value = team.name;
+                team.pokemon.forEach((p, idx) => {
+                    document.getElementById(`pokemon_${idx + 1}`).value = p.id;
+                });
+            })
+            .catch(() => {
+                selects.forEach(s => {
+                    s.innerHTML = '<option value="">Failed to load</option>';
+                });
+            });
+
+        document.getElementById('editTeamForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+
+            const body = { name: document.getElementById('teamName').value };
+            for (let i = 1; i <= 6; i++) {
+                body[`pokemon_${i}`] = parseInt(document.getElementById(`pokemon_${i}`).value);
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            fetch(`/api/team/${teamId}/edit/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(body)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alertContainer.innerHTML =
+                        '<div class="alert alert-success">Team updated successfully!</div>';
+                } else {
+                    return response.json().then(data => {
+                        alertContainer.innerHTML =
+                            `<div class="alert alert-danger">${data.error || 'Something went wrong.'}</div>`;
+                    });
+                }
+            })
+            .catch(() => {
+                alertContainer.innerHTML =
+                    '<div class="alert alert-danger">Network error. Please try again.</div>';
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            });
+        });
+
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let c of cookies) {
+                c = c.trim();
+                if (c.startsWith(name + '=')) {
+                    return decodeURIComponent(c.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+    });
+</script>
+{% endblock %}

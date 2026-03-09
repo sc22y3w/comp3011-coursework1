@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Teams{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Pokémon Teams</h1>
+
+<div id="alertContainer"></div>
+<div id="teamsContainer">
+    <p>Loading teams...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('teamsContainer');
+
+        fetch('/api/teams/')
+            .then(response => response.json())
+            .then(data => {
+                const teams = data.teams;
+                if (teams.length === 0) {
+                    container.innerHTML = '<p>No teams created yet. <a href="/team/create/">Create one!</a></p>';
+                    return;
+                }
+
+                let html = '';
+                teams.forEach(team => {
+                    html += `<div class="card mb-3">
+                        <div class="card-header"><strong>${team.name}</strong></div>
+                        <div class="card-body">
+                            <div class="row">`;
+                    team.pokemon.forEach((p, idx) => {
+                        html += `<div class="col-md-2 text-center">
+                            <span class="badge bg-secondary">Slot ${idx + 1}</span>
+                            <p class="mt-1 mb-0">${p.name}</p>
+                        </div>`;
+                    });
+                    html += `</div></div>
+                        <div class="card-footer">
+                            <a href="/team/${team.id}/edit/" class="btn btn-sm btn-outline-primary">Edit Team</a>
+                        </div></div>`;
+                });
+                container.innerHTML = html;
+            })
+            .catch(() => {
+                container.innerHTML = '<div class="alert alert-danger">Failed to load teams.</div>';
+            });
+    });
+</script>
+{% endblock %}

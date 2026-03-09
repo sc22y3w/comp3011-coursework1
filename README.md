@@ -20,34 +20,34 @@ Returns a list of all Pokémon with their stats, types, abilities, and type matc
 {
   "pokemon": [
     {
-      "id": 1,
-      "name": "Bulbasaur",
-      "types": ["grass", "poison"],
-      "abilities": ["overgrow", "chlorophyll"],
-      "hp": 45,
-      "attack": 49,
-      "defense": 49,
-      "special_attack": 65,
-      "special_defense": 65,
-      "speed": 45,
-      "against_bug": 1.0,
-      "against_dark": 1.0,
-      "against_dragon": 1.0,
-      "against_electric": 0.5,
-      "against_fairy": 0.5,
-      "against_fight": 0.5,
-      "against_fire": 2.0,
-      "against_flying": 2.0,
-      "against_ghost": 1.0,
-      "against_grass": 0.25,
-      "against_ground": 1.0,
-      "against_ice": 2.0,
-      "against_normal": 1.0,
-      "against_poison": 1.0,
-      "against_psychic": 2.0,
-      "against_rock": 1.0,
-      "against_steel": 1.0,
-      "against_water": 0.5
+      "id": int,
+      "name": string,
+      "types": [string],
+      "abilities": [string],
+      "hp": int,
+      "attack": int,
+      "defense": int,
+      "special_attack": int,
+      "special_defense": int,
+      "speed": int,
+      "against_bug": float,
+      "against_dark": float,
+      "against_dragon": float,
+      "against_electric": float,
+      "against_fairy": float,
+      "against_fight": float,
+      "against_fire": float,
+      "against_flying": float,
+      "against_ghost": float,
+      "against_grass": float,
+      "against_ground": float,
+      "against_ice": float,
+      "against_normal": float,
+      "against_poison": float,
+      "against_psychic": float,
+      "against_rock": float,
+      "against_steel": float,
+      "against_water": float
     }
   ]
 }
@@ -77,9 +77,115 @@ Returns a list of all Pokémon with their stats, types, abilities, and type matc
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
 | `500 Internal Server Error` | An unexpected server error occurred |
 
+### Create a Pokémon Team
+
+```
+POST /api/team/create/
+```
+
+Creates a new Pokémon team with 6 Pokémon.
+
+#### Request Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "name": string,
+  "pokemon_1": int,
+  "pokemon_2": int,
+  "pokemon_3": int,
+  "pokemon_4": int,
+  "pokemon_5": int,
+  "pokemon_6": int
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Unique name for the team |
+| `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
+| `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
+| `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |
+| `pokemon_4` | integer | Yes | ID of the 4th Pokémon |
+| `pokemon_5` | integer | Yes | ID of the 5th Pokémon |
+| `pokemon_6` | integer | Yes | ID of the 6th Pokémon |
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `201 Created` | Team successfully created | Empty |
+| `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
+| `404 Not Found` | A referenced Pokémon ID does not exist | `{"error": "Pokemon with id <id> does not exist"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `POST` is supported) | Empty |
+| `409 Conflict` | A team with the given name already exists | `{"error": "A team with this name already exists"}` |
+| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+
+#### Error Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "error": string
+}
+```
+
+### Get All Teams
+
+```
+GET /api/teams/
+```
+
+Returns a list of all Pokémon teams and their members.
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "teams": [
+    {
+      "id": int,
+      "name": string,
+      "pokemon": [
+        {"id": int, "name": string},
+        {"id": int, "name": string},
+        {"id": int, "name": string},
+        {"id": int, "name": string},
+        {"id": int, "name": string},
+        {"id": int, "name": string}
+      ]
+    }
+  ]
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Unique identifier for the team |
+| `name` | string | Name of the team |
+| `pokemon` | array of objects | The 6 Pokémon in the team, each with `id` (integer) and `name` (string) |
+
+#### Response Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Successfully retrieved teams |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
+| `500 Internal Server Error` | An unexpected server error occurred |
+
 ## Pages
 
 | Route | Description |
 |-------|-------------|
 | `/pokemon/` | Web page displaying all Pokémon in a searchable table |
+| `/teams/` | Web page displaying all created Pokémon teams |
+| `/team/create/` | Web page for creating a new Pokémon team |
 | `/admin/` | Django admin panel |
