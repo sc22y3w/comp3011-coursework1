@@ -24,3 +24,8 @@ def teams_page(request):
 def edit_team_page(request, team_id):
     """Renders the edit_team.html page."""
     return render(request, 'edit_team.html', {'team_id': team_id, 'slots': range(1, 7)})
+
+
+def analysis_page(request, team_id):
+    """Renders the analysis.html page."""
+    return render(request, 'analysis.html', {'team_id': team_id})

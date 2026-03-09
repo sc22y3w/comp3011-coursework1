@@ -40,6 +40,7 @@
                     html += `</div></div>
                         <div class="card-footer">
                             <a href="/team/${team.id}/edit/" class="btn btn-sm btn-outline-primary">Edit Team</a>
+                            <a href="/team/${team.id}/analysis/" class="btn btn-sm btn-outline-info ms-2">Analyse Team</a>
                             <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteTeam(${team.id}, '${team.name.replace(/'/g, "\\'")}')">Delete Team</button>
                         </div></div>`;
                 });

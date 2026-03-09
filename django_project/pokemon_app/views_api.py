@@ -154,3 +154,73 @@ def delete_team_api(request, team_id):
 
     team.delete()
     return JsonResponse({'message': 'Team deleted successfully'})
+
+
+def team_analysis_api(request, team_id):
+    """API endpoint that analyses a team's effectiveness against each Pokemon type.
+
+    For each of the 18 types, returns per-Pokemon multipliers, the team average,
+    the best and worst matchups, and an overall rating.
+    """
+    try:
+        team = PokemonTeam.objects.select_related(
+            'pokemon_1', 'pokemon_2', 'pokemon_3',
+            'pokemon_4', 'pokemon_5', 'pokemon_6',
+        ).get(id=team_id)
+    except PokemonTeam.DoesNotExist:
+        return JsonResponse({'error': 'Team not found'}, status=404)
+
+    TYPES = [
+        'bug', 'dark', 'dragon', 'electric', 'fairy', 'fight',
+        'fire', 'flying', 'ghost', 'grass', 'ground', 'ice',
+        'normal', 'poison', 'psychic', 'rock', 'steel', 'water',
+    ]
+
+    members = [getattr(team, f'pokemon_{i}') for i in range(1, 7)]
+
+    type_analysis = {}
+    for t in TYPES:
+        field = f'against_{t}'
+        multipliers = [getattr(p, field) for p in members]
+        avg = sum(multipliers) / len(multipliers)
+        best_idx = multipliers.index(min(multipliers))
+        worst_idx = multipliers.index(max(multipliers))
+
+        if avg <= 0.5:
+            rating = 'very resistant'
+        elif avg <= 1.0:
+            rating = 'resistant'
+        elif avg <= 1.5:
+            rating = 'neutral'
+        elif avg <= 2.0:
+            rating = 'vulnerable'
+        else:
+            rating = 'very vulnerable'
+
+        type_analysis[t] = {
+            'pokemon_multipliers': {
+                p.name: multipliers[i] for i, p in enumerate(members)
+            },
+            'average_multiplier': round(avg, 3),
+            'best_pokemon': {'name': members[best_idx].name, 'multiplier': multipliers[best_idx]},
+            'worst_pokemon': {'name': members[worst_idx].name, 'multiplier': multipliers[worst_idx]},
+            'rating': rating,
+        }
+
+    strengths = sorted(
+        [t for t in TYPES if type_analysis[t]['average_multiplier'] < 1.0],
+        key=lambda t: type_analysis[t]['average_multiplier'],
+    )
+    weaknesses = sorted(
+        [t for t in TYPES if type_analysis[t]['average_multiplier'] > 1.0],
+        key=lambda t: type_analysis[t]['average_multiplier'],
+        reverse=True,
+    )
+
+    return JsonResponse({
+        'team': team.name,
+        'members': [p.name for p in members],
+        'type_analysis': type_analysis,
+        'strengths': strengths,
+        'weaknesses': weaknesses,
+    })
