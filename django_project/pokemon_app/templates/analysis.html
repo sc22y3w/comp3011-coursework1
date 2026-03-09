@@ -156,13 +156,12 @@
         const types = Object.keys(data.type_analysis).sort();
         types.forEach(t => {
             const info = data.type_analysis[t];
-            const multipliers = Object.values(info.pokemon_multipliers);
             html += `<tr><td>${typeBadge(t)}</td>`;
-            multipliers.forEach(m => {
+            info.pokemon_multipliers.forEach(entry => {
                 let cls = '';
-                if (m < 1) cls = 'text-success';
-                else if (m > 1) cls = 'text-danger';
-                html += `<td class="text-center ${cls}">${m}x</td>`;
+                if (entry.multiplier < 1) cls = 'text-success';
+                else if (entry.multiplier > 1) cls = 'text-danger';
+                html += `<td class="text-center ${cls}">${entry.multiplier}x</td>`;
             });
             const ratingCls = RATING_CLASS[info.rating] || '';
             html += `<td class="text-center"><strong>${info.average_multiplier}x</strong></td>

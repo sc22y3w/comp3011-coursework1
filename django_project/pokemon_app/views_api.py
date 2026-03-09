@@ -198,9 +198,9 @@ def team_analysis_api(request, team_id):
             rating = 'very vulnerable'
 
         type_analysis[t] = {
-            'pokemon_multipliers': {
-                p.name: multipliers[i] for i, p in enumerate(members)
-            },
+            'pokemon_multipliers': [
+                {'name': p.name, 'multiplier': multipliers[i]} for i, p in enumerate(members)
+            ],
             'average_multiplier': round(avg, 3),
             'best_pokemon': {'name': members[best_idx].name, 'multiplier': multipliers[best_idx]},
             'worst_pokemon': {'name': members[worst_idx].name, 'multiplier': multipliers[worst_idx]},

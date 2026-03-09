@@ -248,6 +248,60 @@ Updates an existing Pokémon team's name and members.
 }
 ```
 
+### Analyse Team Effectiveness
+
+```
+GET /api/team/<id>/analysis/
+```
+
+Analyses a team's effectiveness against each of the 18 Pokémon types by aggregating the `against_*` multipliers of all 6 team members.
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "team": string,
+  "members": [string],
+  "type_analysis": {
+    "<type>": {
+      "pokemon_multipliers": {"<pokemon_name>": float},
+      "average_multiplier": float,
+      "best_pokemon": {"name": string, "multiplier": float},
+      "worst_pokemon": {"name": string, "multiplier": float},
+      "rating": string
+    }
+  },
+  "strengths": [string],
+  "weaknesses": [string]
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `team` | string | Name of the team |
+| `members` | array of strings | Names of the 6 Pokémon in the team |
+| `type_analysis` | object | Per-type breakdown (keys are type names, e.g. `bug`, `fire`) |
+| `type_analysis.<type>.pokemon_multipliers` | object | Each team member's damage multiplier against this type |
+| `type_analysis.<type>.average_multiplier` | float | Mean multiplier across all 6 members (rounded to 3 d.p.) |
+| `type_analysis.<type>.best_pokemon` | object | Team member with the lowest (most resistant) multiplier |
+| `type_analysis.<type>.worst_pokemon` | object | Team member with the highest (most vulnerable) multiplier |
+| `type_analysis.<type>.rating` | string | One of: `very resistant` (≤0.5), `resistant` (≤1.0), `neutral` (≤1.5), `vulnerable` (≤2.0), `very vulnerable` (>2.0) |
+| `strengths` | array of strings | Types the team is resistant to (avg < 1.0), sorted best first |
+| `weaknesses` | array of strings | Types the team is vulnerable to (avg > 1.0), sorted worst first |
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Analysis successfully computed | See response format above |
+| `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) | Empty |
+| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+
 ## Pages
 
 | Route | Description |
@@ -256,4 +310,5 @@ Updates an existing Pokémon team's name and members.
 | `/teams/` | Web page displaying all created Pokémon teams |
 | `/team/create/` | Web page for creating a new Pokémon team |
 | `/team/<id>/edit/` | Web page for editing an existing Pokémon team |
+| `/team/<id>/analysis/` | Web page showing the team's type effectiveness analysis |
 | `/admin/` | Django admin panel |
