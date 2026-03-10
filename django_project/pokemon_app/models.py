@@ -48,6 +48,7 @@ class Pokemon(models.Model):
 
 class PokemonTeam(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    public = models.BooleanField(default=False)
     pokemon_1 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_1')
     pokemon_2 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_2')
     pokemon_3 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_3')

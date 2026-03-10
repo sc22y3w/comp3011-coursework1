@@ -92,6 +92,7 @@ Creates a new Pokémon team with 6 Pokémon.
 ```json
 {
   "name": string,
+  "public": bool,
   "pokemon_1": int,
   "pokemon_2": int,
   "pokemon_3": int,
@@ -106,6 +107,7 @@ Creates a new Pokémon team with 6 Pokémon.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique name for the team |
+| `public` | boolean | No | Whether the team is publicly visible. Defaults to `false` if omitted. |
 | `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
 | `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
 | `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |
@@ -140,7 +142,7 @@ Creates a new Pokémon team with 6 Pokémon.
 GET /api/teams/
 ```
 
-Returns a list of all Pokémon teams and their members.
+Returns a list of all Pokémon teams, including visibility and team members.
 
 #### Response Format
 
@@ -152,6 +154,7 @@ Returns a list of all Pokémon teams and their members.
     {
       "id": int,
       "name": string,
+      "public": bool,
       "pokemon": [
         {"id": int, "name": string},
         {"id": int, "name": string},
@@ -171,6 +174,7 @@ Returns a list of all Pokémon teams and their members.
 |-------|------|-------------|
 | `id` | integer | Unique identifier for the team |
 | `name` | string | Name of the team |
+| `public` | boolean | Whether the team is publicly visible |
 | `pokemon` | array of objects | The 6 Pokémon in the team, each with `id` (integer) and `name` (string) |
 
 #### Response Codes
@@ -196,6 +200,7 @@ Updates an existing Pokémon team's name and members.
 ```json
 {
   "name": string,
+  "public": bool,
   "pokemon_1": int,
   "pokemon_2": int,
   "pokemon_3": int,
@@ -210,6 +215,7 @@ Updates an existing Pokémon team's name and members.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique name for the team |
+| `public` | boolean | No | Whether the team is publicly visible. If omitted, current value is kept. |
 | `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
 | `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
 | `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |

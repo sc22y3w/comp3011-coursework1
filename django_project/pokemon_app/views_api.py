@@ -6,6 +6,23 @@ from django.views.decorators.http import require_http_methods
 from .models import Pokemon, PokemonTeam
 
 
+def parse_bool(value):
+    """Parse common boolean representations from JSON payloads."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if value in (0, 1):
+            return bool(value)
+        return None
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ('true', '1', 'yes', 'on'):
+            return True
+        if normalized in ('false', '0', 'no', 'off'):
+            return False
+    return None
+
+
 def pokemon_api(request):
     """API endpoint that returns all Pokemon data as JSON."""
     pokemon_list = []
@@ -58,6 +75,10 @@ def create_team_api(request):
     if PokemonTeam.objects.filter(name=name).exists():
         return JsonResponse({'error': 'A team with this name already exists'}, status=409)
 
+    public = parse_bool(data.get('public', False))
+    if public is None:
+        return JsonResponse({'error': 'public must be a boolean value'}, status=400)
+
     pokemon_ids = []
     for i in range(1, 7):
         pid = data.get(f'pokemon_{i}')
@@ -76,7 +97,7 @@ def create_team_api(request):
         except Pokemon.DoesNotExist:
             return JsonResponse({'error': f'Pokemon with id {pid} does not exist'}, status=404)
 
-    team = PokemonTeam.objects.create(name=name, **pokemon_objects)
+    team = PokemonTeam.objects.create(name=name, public=public, **pokemon_objects)
 
     return HttpResponse(status=201)
 
@@ -92,6 +113,7 @@ def teams_api(request):
         team_list.append({
             'id': t.id,
             'name': t.name,
+            'public': t.public,
             'pokemon': [
                 {'id': getattr(t, f'pokemon_{i}').id, 'name': getattr(t, f'pokemon_{i}').name}
                 for i in range(1, 7)
@@ -120,6 +142,13 @@ def edit_team_api(request, team_id):
     if PokemonTeam.objects.filter(name=name).exclude(id=team_id).exists():
         return JsonResponse({'error': 'A team with this name already exists'}, status=409)
 
+    public = team.public
+    if 'public' in data:
+        parsed_public = parse_bool(data.get('public'))
+        if parsed_public is None:
+            return JsonResponse({'error': 'public must be a boolean value'}, status=400)
+        public = parsed_public
+
     pokemon_ids = []
     for i in range(1, 7):
         pid = data.get(f'pokemon_{i}')
@@ -139,6 +168,7 @@ def edit_team_api(request, team_id):
         setattr(team, f'pokemon_{i}', pokemon)
 
     team.name = name
+    team.public = public
     team.save()
 
     return JsonResponse({'message': 'Team updated successfully'})

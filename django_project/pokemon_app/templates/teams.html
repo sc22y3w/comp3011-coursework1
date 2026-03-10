@@ -16,10 +16,26 @@
     document.addEventListener('DOMContentLoaded', function () {
         const container = document.getElementById('teamsContainer');
 
-        fetch('/api/teams/')
-            .then(response => response.json())
-            .then(data => {
-                const teams = data.teams;
+        function renderTypeBadges(types) {
+            if (!types || types.length === 0) {
+                return '';
+            }
+            return types.map(type =>
+                `<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
+            ).join(' ');
+        }
+
+        Promise.all([
+            fetch('/api/teams/').then(response => response.json()),
+            fetch('/api/pokemon/').then(response => response.json()),
+        ])
+            .then(([teamsData, pokemonData]) => {
+                const teams = teamsData.teams || [];
+                const pokemonTypeMap = {};
+                (pokemonData.pokemon || []).forEach(pokemon => {
+                    pokemonTypeMap[pokemon.id] = pokemon.types || [];
+                });
+
                 if (teams.length === 0) {
                     container.innerHTML = '<p>No teams created yet. <a href="/team/create/">Create one!</a></p>';
                     return;
@@ -27,14 +43,19 @@
 
                 let html = '';
                 teams.forEach(team => {
+                    const visibilityBadge = team.public
+                        ? '<span class="badge bg-success ms-2">Public</span>'
+                        : '<span class="badge bg-secondary ms-2">Private</span>';
                     html += `<div class="card mb-3">
-                        <div class="card-header"><strong>${team.name}</strong></div>
+                        <div class="card-header"><strong>${team.name}</strong>${visibilityBadge}</div>
                         <div class="card-body">
                             <div class="row">`;
                     team.pokemon.forEach((p, idx) => {
+                        const typesBadges = renderTypeBadges(pokemonTypeMap[p.id]);
                         html += `<div class="col-md-2 text-center">
                             <span class="badge bg-secondary">Slot ${idx + 1}</span>
                             <p class="mt-1 mb-0">${p.name}</p>
+                            <div class="mt-1">${typesBadges}</div>
                         </div>`;
                     });
                     html += `</div></div>

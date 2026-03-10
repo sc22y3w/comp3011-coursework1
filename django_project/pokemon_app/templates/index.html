@@ -3,4 +3,73 @@
 {% block title %}Home - Pokémon App{% endblock %}
 
 {% block content %}
+<h1 class="mb-4">Public Pokémon Teams</h1>
+
+<div id="publicTeamsContainer">
+	<p>Loading public teams...</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		const container = document.getElementById('publicTeamsContainer');
+
+		function renderTypeBadges(types) {
+			if (!types || types.length === 0) {
+				return '';
+			}
+			return types.map(type =>
+				`<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
+			).join(' ');
+		}
+
+		Promise.all([
+			fetch('/api/teams/').then(response => response.json()),
+			fetch('/api/pokemon/').then(response => response.json()),
+		])
+			.then(([teamsData, pokemonData]) => {
+				const publicTeams = (teamsData.teams || []).filter(team => team.public);
+				const pokemonTypeMap = {};
+				(pokemonData.pokemon || []).forEach(pokemon => {
+					pokemonTypeMap[pokemon.id] = pokemon.types || [];
+				});
+
+				if (publicTeams.length === 0) {
+					container.innerHTML = '<p>No public teams available yet.</p>';
+					return;
+				}
+
+				let html = '';
+				publicTeams.forEach(team => {
+					html += `<div class="card mb-3">
+						<div class="card-header d-flex justify-content-between align-items-center">
+							<strong>${team.name}</strong>
+							<span class="badge bg-success">Public</span>
+						</div>
+						<div class="card-body">
+							<div class="row">`;
+
+					team.pokemon.forEach((p, idx) => {
+						const typesBadges = renderTypeBadges(pokemonTypeMap[p.id]);
+						html += `<div class="col-md-2 text-center mb-2">
+							<span class="badge bg-secondary">Slot ${idx + 1}</span>
+							<p class="mt-1 mb-0">${p.name}</p>
+							<div class="mt-1">${typesBadges}</div>
+						</div>`;
+					});
+
+					html += `</div>
+							<a href="/team/${team.id}/analysis/" class="btn btn-sm btn-outline-info mt-2">Analyse Team</a>
+						</div>
+					</div>`;
+				});
+
+				container.innerHTML = html;
+			})
+			.catch(() => {
+				container.innerHTML = '<div class="alert alert-danger">Failed to load public teams.</div>';
+			});
+	});
+</script>
 {% endblock %}
