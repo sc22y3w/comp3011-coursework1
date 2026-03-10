@@ -178,6 +178,25 @@ def team_analysis_api(request, team_id):
 
     members = [getattr(team, f'pokemon_{i}') for i in range(1, 7)]
 
+    def get_attack_style(p):
+        if p.attack > p.special_attack:
+            return 'physical'
+        elif p.special_attack > p.attack:
+            return 'special'
+        else:
+            return 'mixed'
+
+    member_details = [
+        {
+            'name': p.name,
+            'types': [t.name for t in p.type.all()],
+            'attack': p.attack,
+            'special_attack': p.special_attack,
+            'attack_style': get_attack_style(p),
+        }
+        for p in members
+    ]
+
     type_analysis = {}
     for t in TYPES:
         field = f'against_{t}'
@@ -220,6 +239,7 @@ def team_analysis_api(request, team_id):
     return JsonResponse({
         'team': team.name,
         'members': [p.name for p in members],
+        'member_details': member_details,
         'type_analysis': type_analysis,
         'strengths': strengths,
         'weaknesses': weaknesses,

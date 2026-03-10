@@ -93,9 +93,16 @@
             <div class="card-body">
                 <div class="row">`;
         data.members.forEach((name, i) => {
+            const detail = data.member_details[i];
+            const styleCls = detail.attack_style === 'physical' ? 'text-danger'
+                           : detail.attack_style === 'special' ? 'text-primary' : 'text-warning';
+            const typesBadges = detail.types.map(t => typeBadge(t)).join(' ');
             html += `<div class="col-md-2 text-center">
                 <span class="badge bg-secondary">Slot ${i + 1}</span>
                 <p class="mt-1 mb-0">${name}</p>
+                <div class="my-1">${typesBadges}</div>
+                <small class="${styleCls}">${detail.attack_style}</small><br>
+                <small class="text-muted">Atk ${detail.attack} / SpA ${detail.special_attack}</small>
             </div>`;
         });
         html += `</div></div></div>`;
