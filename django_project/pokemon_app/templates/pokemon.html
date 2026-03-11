@@ -208,11 +208,22 @@
                 tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No Pokémon found.</td></tr>';
                 return;
             }
+
+            function renderTypeBadges(types) {
+                if (!types || types.length === 0) {
+                    return '';
+                }
+
+                return types.map(type =>
+                    `<span class="type-badge type-${type.toLowerCase()}">${type}</span>`
+                ).join(' ');
+            }
+
             tableBody.innerHTML = pokemonList.map(p => `
                 <tr>
                     <td>${p.id}</td>
                     <td>${p.name}</td>
-                    <td>${p.types.join(', ')}</td>
+                    <td>${renderTypeBadges(p.types)}</td>
                     <td>${p.abilities.join(', ')}</td>
                     <td>${p.hp}</td>
                     <td>${p.attack}</td>

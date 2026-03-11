@@ -1,7 +1,6 @@
 import json
 from collections import Counter
 
-from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods
 
@@ -31,7 +30,9 @@ def pokemon_api(request):
 
     sort_types_raw = request.GET.get('sort_types') or request.GET.get('sort_type')
     if sort_types_raw:
-        requested_types = [t.strip().lower() for t in sort_types_raw.split(',') if t.strip()]
+        requested_types = list(dict.fromkeys(
+            t.strip().lower() for t in sort_types_raw.split(',') if t.strip()
+        ))
         if not requested_types:
             return JsonResponse({'error': 'sort_type must contain at least one type name'}, status=400)
 
@@ -47,13 +48,10 @@ def pokemon_api(request):
                 status=400,
             )
 
-        type_query = Q()
         for type_name in requested_types:
-            type_query |= Q(type__name__iexact=type_name)
+            queryset = queryset.filter(type__name__iexact=type_name)
 
-        queryset = queryset.annotate(
-            matched_type_count=Count('type', filter=type_query, distinct=True)
-        ).order_by('-matched_type_count', 'name', 'id')
+        queryset = queryset.distinct().order_by('id')
     else:
         queryset = queryset.order_by('id')
 
