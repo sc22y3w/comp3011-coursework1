@@ -5,8 +5,36 @@
 {% block content %}
 <h1 class="mb-4">Pokémon List</h1>
 
-<div class="mb-3">
-    <input type="text" id="searchInput" class="form-control" placeholder="Search Pokémon by name...">
+<div class="row g-3 align-items-end mb-3">
+    <div class="col-md-6">
+        <label for="searchInput" class="form-label">Search</label>
+        <input type="text" id="searchInput" class="form-control" placeholder="Search Pokémon by name...">
+    </div>
+    <div class="col-md-6">
+        <label for="typeFilterButton" class="form-label">Filter by Type</label>
+        <div class="form-text">Select one or more types. Default is All Types.</div>
+        <div class="dropdown">
+            <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+                type="button"
+                id="typeFilterButton"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+            >
+                All Types
+            </button>
+            <ul class="dropdown-menu w-100 p-2" id="typeFilterMenu">
+                <li>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="__all__" id="typeFilterAll" checked>
+                        <label class="form-check-label" for="typeFilterAll">All Types</label>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+            </ul>
+        </div>
+    </div>
 </div>
 
 <div class="table-responsive">
@@ -37,33 +65,150 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const ALL_TYPES_VALUE = '__all__';
+        const searchInput = document.getElementById('searchInput');
+        const typeFilterMenu = document.getElementById('typeFilterMenu');
+        const typeFilterButton = document.getElementById('typeFilterButton');
+        const tableBody = document.getElementById('pokemonTableBody');
+
         let allPokemon = [];
 
-        fetch('/api/pokemon/')
-            .then(response => response.json())
-            .then(data => {
+        loadPokemon([]);
+
+        searchInput.addEventListener('input', applyFiltersAndRender);
+        typeFilterMenu.addEventListener('change', onTypeFilterChange);
+
+        async function loadPokemon(sortTypes) {
+            const query = sortTypes.length
+                ? `?sort_types=${encodeURIComponent(sortTypes.join(','))}`
+                : '';
+
+            try {
+                const response = await fetch(`/api/pokemon/${query}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load Pokémon data.');
+                }
+
                 allPokemon = data.pokemon;
-                renderTable(allPokemon);
-            })
-            .catch(error => {
-                document.getElementById('pokemonTableBody').innerHTML =
+                populateTypeFilterOptions(allPokemon);
+                applyFiltersAndRender();
+            } catch (error) {
+                tableBody.innerHTML =
                     '<tr><td colspan="10" class="text-center text-danger">Failed to load Pokémon data.</td></tr>';
                 console.error('Error fetching Pokémon:', error);
-            });
+            }
+        }
 
-        document.getElementById('searchInput').addEventListener('input', function () {
-            const query = this.value.toLowerCase();
-            const filtered = allPokemon.filter(p => p.name.toLowerCase().includes(query));
-            renderTable(filtered);
-        });
+        function getSelectedTypes() {
+            return Array.from(typeFilterMenu.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+        }
 
-        function renderTable(pokemonList) {
-            const tbody = document.getElementById('pokemonTableBody');
-            if (pokemonList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No Pokémon found.</td></tr>';
+        function getCheckedTypeLabels() {
+            return Array.from(typeFilterMenu.querySelectorAll('input[type="checkbox"]:checked'))
+                .filter(checkbox => checkbox.value !== ALL_TYPES_VALUE)
+                .map(checkbox => checkbox.dataset.label || checkbox.value);
+        }
+
+        function updateTypeFilterButtonLabel() {
+            const labels = getCheckedTypeLabels();
+            typeFilterButton.textContent = labels.length ? labels.join(', ') : 'All Types';
+        }
+
+        function onTypeFilterChange(event) {
+            const changedCheckbox = event.target;
+            if (!changedCheckbox || changedCheckbox.type !== 'checkbox') {
                 return;
             }
-            tbody.innerHTML = pokemonList.map(p => `
+
+            const allCheckbox = typeFilterMenu.querySelector(`input[value="${ALL_TYPES_VALUE}"]`);
+
+            if (changedCheckbox.value === ALL_TYPES_VALUE && changedCheckbox.checked) {
+                typeFilterMenu.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    if (checkbox.value !== ALL_TYPES_VALUE) {
+                        checkbox.checked = false;
+                    }
+                });
+            }
+
+            if (changedCheckbox.value !== ALL_TYPES_VALUE && changedCheckbox.checked) {
+                allCheckbox.checked = false;
+            }
+
+            let selected = getSelectedTypes();
+
+            if (selected.length === 0) {
+                allCheckbox.checked = true;
+                selected = [ALL_TYPES_VALUE];
+            }
+
+            const activeTypes = selected.includes(ALL_TYPES_VALUE) ? [] : selected;
+            updateTypeFilterButtonLabel();
+            loadPokemon(activeTypes);
+        }
+
+        function populateTypeFilterOptions(pokemonList) {
+            if (typeFilterMenu.dataset.initialized === 'true') {
+                return;
+            }
+
+            const allTypes = new Set();
+            pokemonList.forEach(pokemon => {
+                pokemon.types.forEach(typeName => allTypes.add(typeName));
+            });
+
+            Array.from(allTypes)
+                .sort((a, b) => a.localeCompare(b))
+                .forEach(typeName => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${typeName.toLowerCase()}">
+                            <label class="form-check-label">${typeName}</label>
+                        </div>
+                    `;
+
+                    const checkbox = li.querySelector('input');
+                    const label = li.querySelector('label');
+                    const checkboxId = `typeFilter-${typeName.toLowerCase()}`;
+                    checkbox.id = checkboxId;
+                    checkbox.dataset.label = typeName;
+                    label.setAttribute('for', checkboxId);
+
+                    typeFilterMenu.appendChild(li);
+                });
+
+            typeFilterMenu.dataset.initialized = 'true';
+            updateTypeFilterButtonLabel();
+        }
+
+        function applyFiltersAndRender() {
+            const query = searchInput.value.trim().toLowerCase();
+            const selected = getSelectedTypes();
+            const activeTypes = selected.includes(ALL_TYPES_VALUE) ? [] : selected;
+
+            const filtered = allPokemon.filter(pokemon => {
+                const matchesName = pokemon.name.toLowerCase().includes(query);
+                const matchesType =
+                    activeTypes.length === 0 ||
+                    activeTypes.some(type =>
+                        pokemon.types.some(pokemonType => pokemonType.toLowerCase() === type)
+                    );
+
+                return matchesName && matchesType;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(pokemonList) {
+            if (pokemonList.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No Pokémon found.</td></tr>';
+                return;
+            }
+            tableBody.innerHTML = pokemonList.map(p => `
                 <tr>
                     <td>${p.id}</td>
                     <td>${p.name}</td>

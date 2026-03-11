@@ -12,6 +12,19 @@ GET /api/pokemon/
 
 Returns a list of all Pokémon with their stats, types, abilities, and type matchup multipliers.
 
+Optional query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sort_type` | string | A single Pokémon type name (e.g. `fire`) used to sort matching Pokémon first. |
+| `sort_types` | comma-separated strings | Multiple type names (e.g. `fire,water`) used to sort Pokémon with the most matching types first. |
+
+Example:
+
+```
+GET /api/pokemon/?sort_types=fire,water
+```
+
 #### Response Format
 
 **Content-Type:** `application/json`

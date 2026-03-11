@@ -19,7 +19,7 @@
 .type-dragon { background: #7038F8; }
 .type-electric { background: #F8D030; color: #333; }
 .type-fairy { background: #EE99AC; color: #333; }
-.type-fight { background: #C03028; }
+.type-fighting, .type-fight { background: #C03028; }
 .type-fire { background: #F08030; }
 .type-flying { background: #A890F0; }
 .type-ghost { background: #705898; }
