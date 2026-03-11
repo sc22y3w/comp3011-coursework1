@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
@@ -304,4 +305,71 @@ def team_analysis_api(request, team_id):
         'type_analysis': type_analysis,
         'strengths': strengths,
         'weaknesses': weaknesses,
+    })
+
+
+def top_pokemon_usage_api(request):
+    """API endpoint that returns the top 10 most-used Pokemon in all teams."""
+    slot_fields = [
+        'pokemon_1_id', 'pokemon_2_id', 'pokemon_3_id',
+        'pokemon_4_id', 'pokemon_5_id', 'pokemon_6_id',
+    ]
+    usage_counter = Counter()
+
+    for row in PokemonTeam.objects.values_list(*slot_fields):
+        usage_counter.update(row)
+
+    if not usage_counter:
+        return JsonResponse({'top_pokemon': []})
+
+    pokemon_names = {
+        p.id: p.name
+        for p in Pokemon.objects.filter(id__in=usage_counter.keys()).only('id', 'name')
+    }
+
+    sorted_usage = sorted(
+        usage_counter.items(),
+        key=lambda item: (-item[1], pokemon_names.get(item[0], ''), item[0]),
+    )[:10]
+
+    return JsonResponse({
+        'top_pokemon': [
+            {
+                'pokemon_id': pokemon_id,
+                'name': pokemon_names.get(pokemon_id),
+                'times_used': count,
+            }
+            for pokemon_id, count in sorted_usage
+        ]
+    })
+
+
+def top_type_usage_api(request):
+    """API endpoint that returns Pokemon types sorted by total usage in all teams."""
+    slot_fields = [
+        'pokemon_1_id', 'pokemon_2_id', 'pokemon_3_id',
+        'pokemon_4_id', 'pokemon_5_id', 'pokemon_6_id',
+    ]
+    usage_counter = Counter()
+
+    for row in PokemonTeam.objects.values_list(*slot_fields):
+        usage_counter.update(row)
+
+    if not usage_counter:
+        return JsonResponse({'type_usage': []})
+
+    type_counter = Counter()
+    pokemon_with_types = Pokemon.objects.filter(id__in=usage_counter.keys()).prefetch_related('type')
+    for pokemon in pokemon_with_types:
+        appearances = usage_counter.get(pokemon.id, 0)
+        for pokemon_type in pokemon.type.all():
+            type_counter[pokemon_type.name] += appearances
+
+    sorted_types = sorted(type_counter.items(), key=lambda item: (-item[1], item[0]))
+
+    return JsonResponse({
+        'type_usage': [
+            {'type': type_name, 'times_used': count}
+            for type_name, count in sorted_types
+        ]
     })

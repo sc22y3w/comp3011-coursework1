@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Global Stats{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Global Stats</h1>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Top 10 Most Used Pokémon</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0" id="topPokemonTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Pokémon</th>
+                                <th>Times Used</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topPokemonTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Most Used Pokémon Types</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0" id="topTypesTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Type</th>
+                                <th>Times Used</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topTypesTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTopPokemon();
+        loadTopTypes();
+
+        async function loadTopPokemon() {
+            const tableBody = document.getElementById('topPokemonTableBody');
+
+            try {
+                const response = await fetch('/api/stats/top-pokemon/');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load top Pokemon stats.');
+                }
+
+                renderTopPokemonTable(data.top_pokemon || []);
+            } catch (error) {
+                tableBody.innerHTML =
+                    '<tr><td colspan="3" class="text-center text-danger">Failed to load data.</td></tr>';
+                console.error('Error loading top Pokemon stats:', error);
+            }
+        }
+
+        async function loadTopTypes() {
+            const tableBody = document.getElementById('topTypesTableBody');
+
+            try {
+                const response = await fetch('/api/stats/top-types/');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load top type stats.');
+                }
+
+                renderTopTypesTable(data.type_usage || []);
+            } catch (error) {
+                tableBody.innerHTML =
+                    '<tr><td colspan="3" class="text-center text-danger">Failed to load data.</td></tr>';
+                console.error('Error loading top type stats:', error);
+            }
+        }
+
+        function renderTopPokemonTable(items) {
+            const tableBody = document.getElementById('topPokemonTableBody');
+
+            if (items.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="text-center">No data available.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = items.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.name}</td>
+                    <td>${item.times_used}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTopTypesTable(items) {
+            const tableBody = document.getElementById('topTypesTableBody');
+
+            if (items.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="text-center">No data available.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = items.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.type}</td>
+                    <td>${item.times_used}</td>
+                </tr>
+            `).join('');
+        }
+    });
+</script>
+{% endblock %}

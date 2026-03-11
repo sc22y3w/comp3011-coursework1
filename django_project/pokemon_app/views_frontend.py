@@ -29,3 +29,8 @@ def edit_team_page(request, team_id):
 def analysis_page(request, team_id):
     """Renders the analysis.html page."""
     return render(request, 'analysis.html', {'team_id': team_id})
+
+
+def global_stats_page(request):
+    """Renders the global_stats.html page."""
+    return render(request, 'global_stats.html')

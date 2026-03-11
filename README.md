@@ -271,6 +271,53 @@ Updates an existing Pokémon team's name and members.
 
 ```
 GET /api/team/<id>/analysis/
+
+### Top 10 Most Used Pokémon
+
+```
+GET /api/stats/top-pokemon/
+```
+
+Returns the top 10 Pokémon most frequently added to team slots across all teams.
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "top_pokemon": [
+    {
+      "pokemon_id": int,
+      "name": string,
+      "times_used": int
+    }
+  ]
+}
+```
+
+### Most Used Pokémon Types
+
+```
+GET /api/stats/top-types/
+```
+
+Returns Pokémon types sorted by how often they appear in team slots (highest first).
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "type_usage": [
+    {
+      "type": string,
+      "times_used": int
+    }
+  ]
+}
+```
 ```
 
 Analyses a team's effectiveness against each of the 18 Pokémon types by aggregating the `against_*` multipliers of all 6 team members.
