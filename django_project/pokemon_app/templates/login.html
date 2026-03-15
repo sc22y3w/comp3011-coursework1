@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <h1 class="mb-3">Login</h1>
+        <p class="text-muted">Sign in using the API-backed authentication flow.</p>
+        <div id="login-message" class="alert d-none" role="alert"></div>
+
+        <form id="login-form" novalidate>
+            <div class="mb-3">
+                <label for="login-username" class="form-label">Username</label>
+                <input type="text" id="login-username" name="username" class="form-control" required autofocus>
+            </div>
+
+            <div class="mb-3">
+                <label for="login-password" class="form-label">Password</label>
+                <input type="password" id="login-password" name="password" class="form-control" required>
+            </div>
+
+            <button id="login-submit" type="submit" class="btn btn-primary">Login</button>
+            <a href="{% url 'frontend_register' %}" class="btn btn-link">Create account</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById('login-form');
+    const submitButton = document.getElementById('login-submit');
+    const message = document.getElementById('login-message');
+    const next = new URLSearchParams(window.location.search).get('next') || '{% url "index" %}';
+
+    const showMessage = (text, type) => {
+        message.textContent = text;
+        message.className = `alert alert-${type}`;
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+
+        const payload = {
+            username: form.username.value.trim(),
+            password: form.password.value,
+        };
+
+        try {
+            const response = await fetch('{% url "login_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showMessage(data.error || 'Login failed', 'danger');
+                submitButton.disabled = false;
+                return;
+            }
+
+            showMessage('Login successful. Redirecting...', 'success');
+            window.location.assign(next);
+        } catch (error) {
+            showMessage('Unable to reach the server. Please try again.', 'danger');
+            submitButton.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

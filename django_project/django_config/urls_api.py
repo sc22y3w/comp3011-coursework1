@@ -3,6 +3,8 @@ from pokemon_app.views_api import (
     create_team_api,
     delete_team_api,
     edit_team_api,
+    login_api,
+    register_api,
     pokemon_api,
     team_analysis_api,
     teams_api,
@@ -11,6 +13,8 @@ from pokemon_app.views_api import (
 )
 
 urlpatterns = [
+    path('auth/register/', register_api, name='register_api'),
+    path('auth/login/', login_api, name='login_api'),
     path('pokemon/', pokemon_api, name='pokemon_api'),
     path('team/create/', create_team_api, name='create_team_api'),
     path('team/<int:team_id>/edit/', edit_team_api, name='edit_team_api'),

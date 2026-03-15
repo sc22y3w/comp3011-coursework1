@@ -1,7 +1,11 @@
 import json
 from collections import Counter
+from functools import wraps
 
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Pokemon, PokemonTeam, PokemonType
@@ -22,6 +26,72 @@ def parse_bool(value):
         if normalized in ('false', '0', 'no', 'off'):
             return False
     return None
+
+
+def api_login_required(view_func):
+    """Return HTTP 401 JSON for unauthenticated requests to API views."""
+
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Authentication credentials were not provided'}, status=401)
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def register_api(request):
+    """Create a user account via API for non-browser clients."""
+    if request.content_type and 'application/json' in request.content_type:
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        username = (data.get('username') or '').strip()
+        password = data.get('password', '')
+    else:
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password', '')
+
+    if not username or not password:
+        return JsonResponse({'error': 'username and password are required'}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'error': 'Username already exists'}, status=409)
+
+    user = User.objects.create_user(username=username, password=password)
+    return JsonResponse(
+        {'message': 'Registration successful', 'username': user.username},
+        status=201,
+    )
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def login_api(request):
+    """Authenticate user via POST and create a Django session."""
+    if request.content_type and 'application/json' in request.content_type:
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        username = data.get('username', '')
+        password = data.get('password', '')
+    else:
+        username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+
+    if not username or not password:
+        return JsonResponse({'error': 'username and password are required'}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return JsonResponse({'error': 'Invalid username or password'}, status=401)
+
+    login(request, user)
+    return JsonResponse({'message': 'Login successful', 'username': user.username}, status=200)
 
 
 def pokemon_api(request):
@@ -90,7 +160,9 @@ def pokemon_api(request):
     return JsonResponse({'pokemon': pokemon_list})
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
+@api_login_required
 def create_team_api(request):
     """API endpoint to create a PokemonTeam."""
     try:
@@ -127,7 +199,7 @@ def create_team_api(request):
         except Pokemon.DoesNotExist:
             return JsonResponse({'error': f'Pokemon with id {pid} does not exist'}, status=404)
 
-    team = PokemonTeam.objects.create(name=name, public=public, **pokemon_objects)
+    team = PokemonTeam.objects.create(name=name, public=public, owner=request.user, **pokemon_objects)
 
     return HttpResponse(status=201)
 
@@ -144,6 +216,7 @@ def teams_api(request):
             'id': t.id,
             'name': t.name,
             'public': t.public,
+            'owner': t.owner.username if t.owner else None,
             'pokemon': [
                 {'id': getattr(t, f'pokemon_{i}').id, 'name': getattr(t, f'pokemon_{i}').name}
                 for i in range(1, 7)
@@ -152,13 +225,18 @@ def teams_api(request):
     return JsonResponse({'teams': team_list})
 
 
+@csrf_exempt
 @require_http_methods(["PUT"])
+@api_login_required
 def edit_team_api(request, team_id):
     """API endpoint to edit an existing PokemonTeam."""
     try:
         team = PokemonTeam.objects.get(id=team_id)
     except PokemonTeam.DoesNotExist:
         return JsonResponse({'error': 'Team not found'}, status=404)
+
+    if team.owner != request.user:
+        return JsonResponse({'error': 'You do not have permission to edit this team'}, status=403)
 
     try:
         data = json.loads(request.body)
@@ -204,13 +282,18 @@ def edit_team_api(request, team_id):
     return JsonResponse({'message': 'Team updated successfully'})
 
 
+@csrf_exempt
 @require_http_methods(["DELETE"])
+@api_login_required
 def delete_team_api(request, team_id):
     """API endpoint to delete a PokemonTeam."""
     try:
         team = PokemonTeam.objects.get(id=team_id)
     except PokemonTeam.DoesNotExist:
         return JsonResponse({'error': 'Team not found'}, status=404)
+
+    if team.owner != request.user:
+        return JsonResponse({'error': 'You do not have permission to delete this team'}, status=403)
 
     team.delete()
     return JsonResponse({'message': 'Team deleted successfully'})

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <h1 class="mb-3">Register</h1>
+        <p class="text-muted">Create an account using the API endpoint.</p>
+        <div id="register-message" class="alert d-none" role="alert"></div>
+
+        <form id="register-form" novalidate>
+            <div class="mb-3">
+                <label for="register-username" class="form-label">Username</label>
+                <input type="text" id="register-username" name="username" class="form-control" required autofocus>
+            </div>
+
+            <div class="mb-3">
+                <label for="register-password" class="form-label">Password</label>
+                <input type="password" id="register-password" name="password" class="form-control" required minlength="8">
+                <div class="form-text">Use at least 8 characters.</div>
+            </div>
+
+            <button id="register-submit" type="submit" class="btn btn-success">Register</button>
+            <a href="{% url 'frontend_login' %}" class="btn btn-link">Back to login</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById('register-form');
+    const submitButton = document.getElementById('register-submit');
+    const message = document.getElementById('register-message');
+
+    const showMessage = (text, type) => {
+        message.textContent = text;
+        message.className = `alert alert-${type}`;
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+
+        const payload = {
+            username: form.username.value.trim(),
+            password: form.password.value,
+        };
+
+        try {
+            const response = await fetch('{% url "register_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showMessage(data.error || 'Registration failed', 'danger');
+                submitButton.disabled = false;
+                return;
+            }
+
+            showMessage('Registration successful. Redirecting to login...', 'success');
+            setTimeout(() => {
+                window.location.assign('{% url "frontend_login" %}');
+            }, 500);
+        } catch (error) {
+            showMessage('Unable to reach the server. Please try again.', 'danger');
+            submitButton.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -21,20 +21,38 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link" href="{% url 'index' %}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/pokemon/">Pokémon</a>
+                        <a class="nav-link" href="{% url 'pokemon_page' %}">Pokémon</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/team/create/">Create Team</a>
+                        <a class="nav-link" href="{% url 'create_team_page' %}">Create Team</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/teams/">Teams</a>
+                        <a class="nav-link" href="{% url 'teams_page' %}">Teams</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/global-stats/">Global Stats</a>
+                        <a class="nav-link" href="{% url 'global_stats_page' %}">Global Stats</a>
                     </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="nav-link">Signed in as {{ user.username }}</span>
+                    </li>
+                    <li class="nav-item">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link">Logout</button>
+                        </form>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'frontend_login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'frontend_register' %}">Register</a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="/admin/">Admin</a>
                     </li>

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 
 class PokemonType(models.Model):
@@ -48,6 +49,7 @@ class Pokemon(models.Model):
 
 class PokemonTeam(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='teams')
     public = models.BooleanField(default=False)
     pokemon_1 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_1')
     pokemon_2 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_2')

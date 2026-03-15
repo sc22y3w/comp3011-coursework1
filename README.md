@@ -4,6 +4,64 @@ A Django web application that serves Pokémon data via a REST API and displays i
 
 ## API Endpoints
 
+### Authentication Note
+
+Non-browser clients can register and log in directly using JSON API calls.
+The frontend web pages at `/register/` and `/login/` also use these same API endpoints via JavaScript `fetch`.
+
+### Register
+
+```
+POST /api/auth/register/
+```
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "username": "misty",
+  "password": "staryu123"
+}
+```
+
+Response codes:
+
+- `201 Created` on success
+- `400 Bad Request` when required fields are missing or JSON is invalid
+- `409 Conflict` when username already exists
+
+### Login
+
+```
+POST /api/auth/login/
+```
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "username": "misty",
+  "password": "staryu123"
+}
+```
+
+Response codes:
+
+- `200 OK` on success
+- `400 Bad Request` when required fields are missing or JSON is invalid
+- `401 Unauthorized` for invalid credentials
+
+The following protected endpoints require a logged-in user:
+
+- `POST /api/team/create/`
+- `PUT /api/team/<id>/edit/`
+- `DELETE /api/team/<id>/delete/`
+
+If a request is made without being logged in, the API returns:
+
+- `401 Unauthorized`
+- `{"error": "Authentication credentials were not provided"}`
+
 ### Get All Pokémon
 
 ```
@@ -16,13 +74,13 @@ Optional query parameters:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `sort_type` | string | A single Pokémon type name (e.g. `fire`) used to sort matching Pokémon first. |
-| `sort_types` | comma-separated strings | Multiple type names (e.g. `fire,water`) used to sort Pokémon with the most matching types first. |
+| `sort_type` | string | Filter Pokémon to only those matching a single type (e.g. `fire`). |
+| `sort_types` | comma-separated strings | Filter Pokémon to only those matching all listed types (e.g. `fire,flying`). |
 
 Example:
 
 ```
-GET /api/pokemon/?sort_types=fire,water
+GET /api/pokemon/?sort_types=fire,flying
 ```
 
 #### Response Format
@@ -87,6 +145,7 @@ GET /api/pokemon/?sort_types=fire,water
 | Status Code | Description |
 |-------------|-------------|
 | `200 OK` | Successfully retrieved Pokémon data |
+| `400 Bad Request` | Unknown type(s) provided in filter parameter |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
 | `500 Internal Server Error` | An unexpected server error occurred |
 
@@ -96,7 +155,7 @@ GET /api/pokemon/?sort_types=fire,water
 POST /api/team/create/
 ```
 
-Creates a new Pokémon team with 6 Pokémon.
+Creates a new Pokémon team with 6 Pokémon. The team is automatically assigned to the authenticated user as its owner.
 
 #### Request Format
 
@@ -134,20 +193,11 @@ Creates a new Pokémon team with 6 Pokémon.
 |-------------|-------------|---------------|
 | `201 Created` | Team successfully created | Empty |
 | `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
+| `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
 | `404 Not Found` | A referenced Pokémon ID does not exist | `{"error": "Pokemon with id <id> does not exist"}` |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `POST` is supported) | Empty |
 | `409 Conflict` | A team with the given name already exists | `{"error": "A team with this name already exists"}` |
 | `500 Internal Server Error` | An unexpected server error occurred | Empty |
-
-#### Error Response Format
-
-**Content-Type:** `application/json`
-
-```json
-{
-  "error": string
-}
-```
 
 ### Get All Teams
 
@@ -155,7 +205,7 @@ Creates a new Pokémon team with 6 Pokémon.
 GET /api/teams/
 ```
 
-Returns a list of all Pokémon teams, including visibility and team members.
+Returns a list of all Pokémon teams, including visibility, owner, and team members.
 
 #### Response Format
 
@@ -168,6 +218,7 @@ Returns a list of all Pokémon teams, including visibility and team members.
       "id": int,
       "name": string,
       "public": bool,
+      "owner": string | null,
       "pokemon": [
         {"id": int, "name": string},
         {"id": int, "name": string},
@@ -188,6 +239,7 @@ Returns a list of all Pokémon teams, including visibility and team members.
 | `id` | integer | Unique identifier for the team |
 | `name` | string | Name of the team |
 | `public` | boolean | Whether the team is publicly visible |
+| `owner` | string or null | Username of the team's owner, or `null` if unowned |
 | `pokemon` | array of objects | The 6 Pokémon in the team, each with `id` (integer) and `name` (string) |
 
 #### Response Codes
@@ -204,7 +256,7 @@ Returns a list of all Pokémon teams, including visibility and team members.
 PUT /api/team/<id>/edit/
 ```
 
-Updates an existing Pokémon team's name and members.
+Updates an existing Pokémon team's name, members, and visibility. Only the team's owner can edit it.
 
 #### Request Format
 
@@ -252,25 +304,95 @@ Updates an existing Pokémon team's name and members.
 |-------------|-------------|---------------|
 | `200 OK` | Team successfully updated | `{"message": "Team updated successfully"}` |
 | `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
+| `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
+| `403 Forbidden` | Authenticated user is not the team's owner | `{"error": "You do not have permission to edit this team"}` |
 | `404 Not Found` | Team or referenced Pokémon ID does not exist | `{"error": "<message>"}` |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `PUT` is supported) | Empty |
 | `409 Conflict` | Another team with the given name already exists | `{"error": "A team with this name already exists"}` |
 | `500 Internal Server Error` | An unexpected server error occurred | Empty |
 
-#### Error Response Format
+### Delete a Pokémon Team
 
-**Content-Type:** `application/json`
-
-```json
-{
-  "error": string
-}
 ```
+DELETE /api/team/<id>/delete/
+```
+
+Deletes a Pokémon team. Only the team's owner can delete it.
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Team successfully deleted | `{"message": "Team deleted successfully"}` |
+| `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
+| `403 Forbidden` | Authenticated user is not the team's owner | `{"error": "You do not have permission to delete this team"}` |
+| `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `DELETE` is supported) | Empty |
+| `500 Internal Server Error` | An unexpected server error occurred | Empty |
 
 ### Analyse Team Effectiveness
 
 ```
 GET /api/team/<id>/analysis/
+```
+
+Analyses a team's effectiveness against each of the 18 Pokémon types by aggregating the `against_*` multipliers of all 6 team members.
+
+#### Response Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "team": string,
+  "members": [string],
+  "member_details": [
+    {
+      "name": string,
+      "types": [string],
+      "attack": int,
+      "special_attack": int,
+      "attack_style": string
+    }
+  ],
+  "type_analysis": {
+    "<type>": {
+      "pokemon_multipliers": [{"name": string, "multiplier": float}],
+      "average_multiplier": float,
+      "best_pokemon": {"name": string, "multiplier": float},
+      "worst_pokemon": {"name": string, "multiplier": float},
+      "rating": string
+    }
+  },
+  "strengths": [string],
+  "weaknesses": [string]
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `team` | string | Name of the team |
+| `members` | array of strings | Names of the 6 Pokémon in the team |
+| `member_details` | array of objects | Per-member stats including types, attack values, and attack style (`physical`, `special`, or `mixed`) |
+| `type_analysis` | object | Per-type breakdown (keys are type names, e.g. `bug`, `fire`) |
+| `type_analysis.<type>.pokemon_multipliers` | array | Each team member's damage multiplier against this type |
+| `type_analysis.<type>.average_multiplier` | float | Mean multiplier across all 6 members (rounded to 3 d.p.) |
+| `type_analysis.<type>.best_pokemon` | object | Team member with the lowest (most resistant) multiplier |
+| `type_analysis.<type>.worst_pokemon` | object | Team member with the highest (most vulnerable) multiplier |
+| `type_analysis.<type>.rating` | string | One of: `very resistant` (≤0.5), `resistant` (≤1.0), `neutral` (≤1.5), `vulnerable` (≤2.0), `very vulnerable` (>2.0) |
+| `strengths` | array of strings | Types the team is resistant to (avg < 1.0), sorted best first |
+| `weaknesses` | array of strings | Types the team is vulnerable to (avg > 1.0), sorted worst first |
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Analysis successfully computed | See response format above |
+| `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) | Empty |
+| `500 Internal Server Error` | An unexpected server error occurred | Empty |
 
 ### Top 10 Most Used Pokémon
 
@@ -296,6 +418,14 @@ Returns the top 10 Pokémon most frequently added to team slots across all teams
 }
 ```
 
+#### Response Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Successfully retrieved usage data |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
+| `500 Internal Server Error` | An unexpected server error occurred |
+
 ### Most Used Pokémon Types
 
 ```
@@ -318,55 +448,14 @@ Returns Pokémon types sorted by how often they appear in team slots (highest fi
   ]
 }
 ```
-```
-
-Analyses a team's effectiveness against each of the 18 Pokémon types by aggregating the `against_*` multipliers of all 6 team members.
-
-#### Response Format
-
-**Content-Type:** `application/json`
-
-```json
-{
-  "team": string,
-  "members": [string],
-  "type_analysis": {
-    "<type>": {
-      "pokemon_multipliers": {"<pokemon_name>": float},
-      "average_multiplier": float,
-      "best_pokemon": {"name": string, "multiplier": float},
-      "worst_pokemon": {"name": string, "multiplier": float},
-      "rating": string
-    }
-  },
-  "strengths": [string],
-  "weaknesses": [string]
-}
-```
-
-#### Response Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `team` | string | Name of the team |
-| `members` | array of strings | Names of the 6 Pokémon in the team |
-| `type_analysis` | object | Per-type breakdown (keys are type names, e.g. `bug`, `fire`) |
-| `type_analysis.<type>.pokemon_multipliers` | object | Each team member's damage multiplier against this type |
-| `type_analysis.<type>.average_multiplier` | float | Mean multiplier across all 6 members (rounded to 3 d.p.) |
-| `type_analysis.<type>.best_pokemon` | object | Team member with the lowest (most resistant) multiplier |
-| `type_analysis.<type>.worst_pokemon` | object | Team member with the highest (most vulnerable) multiplier |
-| `type_analysis.<type>.rating` | string | One of: `very resistant` (≤0.5), `resistant` (≤1.0), `neutral` (≤1.5), `vulnerable` (≤2.0), `very vulnerable` (>2.0) |
-| `strengths` | array of strings | Types the team is resistant to (avg < 1.0), sorted best first |
-| `weaknesses` | array of strings | Types the team is vulnerable to (avg > 1.0), sorted worst first |
 
 #### Response Codes
 
-| Status Code | Description | Response Body |
-|-------------|-------------|---------------|
-| `200 OK` | Analysis successfully computed | See response format above |
-| `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) | Empty |
-| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Successfully retrieved type usage data |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
+| `500 Internal Server Error` | An unexpected server error occurred |
 
 ## Pages
 
