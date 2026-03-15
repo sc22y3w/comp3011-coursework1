@@ -4,6 +4,8 @@ from functools import wraps
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -60,6 +62,11 @@ def register_api(request):
 
     if User.objects.filter(username=username).exists():
         return JsonResponse({'error': 'Username already exists'}, status=409)
+
+    try:
+        validate_password(password, user=User(username=username))
+    except ValidationError as exc:
+        return JsonResponse({'error': 'Password does not meet requirements', 'details': exc.messages}, status=400)
 
     user = User.objects.create_user(username=username, password=password)
     return JsonResponse(
