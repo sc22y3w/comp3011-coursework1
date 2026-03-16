@@ -78,7 +78,7 @@
         const alertContainer = document.getElementById('alertContainer');
         alertContainer.innerHTML = '';
 
-        fetch(`/api/team/${teamId}/delete/`, {
+        fetch(`/api/teams/${teamId}/`, {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')

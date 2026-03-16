@@ -29,7 +29,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const container = document.getElementById('analysisContainer');
 
-        fetch(`/api/team/${teamId}/analysis/`)
+        fetch(`/api/teams/${teamId}/analysis/`)
             .then(r => r.json())
             .then(data => {
                 if (data.error) {

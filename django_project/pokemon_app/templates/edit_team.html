@@ -98,7 +98,7 @@
             btn.disabled = true;
             btn.textContent = 'Saving...';
 
-            fetch(`/api/team/${teamId}/edit/`, {
+            fetch(`/api/teams/${teamId}/`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

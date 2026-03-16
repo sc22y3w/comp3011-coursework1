@@ -172,8 +172,8 @@ def pokemon_api(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 @api_login_required
-def create_team_api(request):
-    """API endpoint to create a PokemonTeam."""
+def _create_team(request):
+    """Handle POST to /api/teams/ — create a PokemonTeam."""
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -213,9 +213,13 @@ def create_team_api(request):
     return HttpResponse(status=201)
 
 
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def teams_api(request):
-    """API endpoint that returns all teams as JSON."""
+    """API endpoint: GET returns all teams, POST creates a new team."""
+    if request.method == 'POST':
+        return _create_team(request)
+    # GET
     teams = PokemonTeam.objects.select_related(
         'pokemon_1', 'pokemon_2', 'pokemon_3',
         'pokemon_4', 'pokemon_5', 'pokemon_6',
@@ -240,15 +244,22 @@ def teams_api(request):
 
 
 @csrf_exempt
-@require_http_methods(["PUT"])
+@require_http_methods(["PUT", "DELETE"])
 @api_login_required
-def edit_team_api(request, team_id):
-    """API endpoint to edit an existing PokemonTeam."""
+def team_detail_api(request, team_id):
+    """API endpoint: PUT updates a team, DELETE removes it."""
     try:
         team = PokemonTeam.objects.get(id=team_id)
     except PokemonTeam.DoesNotExist:
         return JsonResponse({'error': 'Team not found'}, status=404)
 
+    if request.method == 'DELETE':
+        if team.owner != request.user:
+            return JsonResponse({'error': 'You do not have permission to delete this team'}, status=403)
+        team.delete()
+        return JsonResponse({'message': 'Team deleted successfully'})
+
+    # PUT
     if team.owner != request.user:
         return JsonResponse({'error': 'You do not have permission to edit this team'}, status=403)
 
@@ -294,23 +305,6 @@ def edit_team_api(request, team_id):
     team.save()
 
     return JsonResponse({'message': 'Team updated successfully'})
-
-
-@csrf_exempt
-@require_http_methods(["DELETE"])
-@api_login_required
-def delete_team_api(request, team_id):
-    """API endpoint to delete a PokemonTeam."""
-    try:
-        team = PokemonTeam.objects.get(id=team_id)
-    except PokemonTeam.DoesNotExist:
-        return JsonResponse({'error': 'Team not found'}, status=404)
-
-    if team.owner != request.user:
-        return JsonResponse({'error': 'You do not have permission to delete this team'}, status=403)
-
-    team.delete()
-    return JsonResponse({'message': 'Team deleted successfully'})
 
 
 @require_http_methods(["GET"])
