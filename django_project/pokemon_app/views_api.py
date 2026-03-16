@@ -246,7 +246,7 @@ def _create_team(request):
 
     team = PokemonTeam.objects.create(name=name, public=public, owner=request.user, **pokemon_objects)
 
-    return HttpResponse(status=201)
+    return JsonResponse({'id': team.id, 'name': team.name}, status=201)
 
 
 @csrf_exempt
@@ -279,21 +279,37 @@ def teams_api(request):
     return JsonResponse({'teams': team_list})
 
 
-@csrf_exempt
-@require_http_methods(["PUT", "DELETE"])
-@api_login_required
+@require_http_methods(["GET", "PUT", "DELETE"])
 def team_detail_api(request, team_id):
-    """API endpoint: PUT updates a team, DELETE removes it."""
+    """API endpoint: GET retrieves, PUT updates, DELETE removes a team."""
     try:
-        team = PokemonTeam.objects.get(id=team_id)
+        team = PokemonTeam.objects.select_related(
+            'owner', 'pokemon_1', 'pokemon_2', 'pokemon_3',
+            'pokemon_4', 'pokemon_5', 'pokemon_6',
+        ).get(id=team_id)
     except PokemonTeam.DoesNotExist:
         return JsonResponse({'error': 'Team not found'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'id': team.id,
+            'name': team.name,
+            'public': team.public,
+            'owner': team.owner.username if team.owner else None,
+            'pokemon': [
+                {'id': getattr(team, f'pokemon_{i}').id, 'name': getattr(team, f'pokemon_{i}').name}
+                for i in range(1, 7)
+            ],
+        })
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication credentials were not provided'}, status=401)
 
     if request.method == 'DELETE':
         if team.owner != request.user:
             return JsonResponse({'error': 'You do not have permission to delete this team'}, status=403)
         team.delete()
-        return JsonResponse({'message': 'Team deleted successfully'})
+        return HttpResponse(status=204)
 
     # PUT
     if team.owner != request.user:
@@ -354,6 +370,9 @@ def team_analysis_api(request, team_id):
         team = PokemonTeam.objects.select_related(
             'pokemon_1', 'pokemon_2', 'pokemon_3',
             'pokemon_4', 'pokemon_5', 'pokemon_6',
+        ).prefetch_related(
+            'pokemon_1__type', 'pokemon_2__type', 'pokemon_3__type',
+            'pokemon_4__type', 'pokemon_5__type', 'pokemon_6__type',
         ).get(id=team_id)
     except PokemonTeam.DoesNotExist:
         return JsonResponse({'error': 'Team not found'}, status=404)
@@ -434,17 +453,22 @@ def team_analysis_api(request, team_id):
     })
 
 
-@require_http_methods(["GET"])
-def top_pokemon_usage_api(request):
-    """API endpoint that returns the top 10 most-used Pokemon in all teams."""
+def _get_team_slot_usage():
+    """Count how many times each Pokemon ID appears across all team slots."""
     slot_fields = [
         'pokemon_1_id', 'pokemon_2_id', 'pokemon_3_id',
         'pokemon_4_id', 'pokemon_5_id', 'pokemon_6_id',
     ]
-    usage_counter = Counter()
-
+    counter = Counter()
     for row in PokemonTeam.objects.values_list(*slot_fields):
-        usage_counter.update(row)
+        counter.update(row)
+    return counter
+
+
+@require_http_methods(["GET"])
+def top_pokemon_usage_api(request):
+    """API endpoint that returns the top 10 most-used Pokemon in all teams."""
+    usage_counter = _get_team_slot_usage()
 
     if not usage_counter:
         return JsonResponse({'top_pokemon': []})
@@ -474,14 +498,7 @@ def top_pokemon_usage_api(request):
 @require_http_methods(["GET"])
 def top_type_usage_api(request):
     """API endpoint that returns Pokemon types sorted by total usage in all teams."""
-    slot_fields = [
-        'pokemon_1_id', 'pokemon_2_id', 'pokemon_3_id',
-        'pokemon_4_id', 'pokemon_5_id', 'pokemon_6_id',
-    ]
-    usage_counter = Counter()
-
-    for row in PokemonTeam.objects.values_list(*slot_fields):
-        usage_counter.update(row)
+    usage_counter = _get_team_slot_usage()
 
     if not usage_counter:
         return JsonResponse({'type_usage': []})

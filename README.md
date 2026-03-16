@@ -1,39 +1,20 @@
-# Pokémon App
+# Pokemon App
 
-A Django web application that serves Pokémon data via a REST API and displays it in a web interface.
+A Django web application that serves Pokemon data via a REST API and displays it in a web interface.
 
 ## API Endpoints
 
-### Authentication Note
+All API endpoints are prefixed with `/api/` and return JSON responses with `Content-Type: application/json`.
+
+### Authentication
 
 Non-browser clients can register and log in directly using JSON API calls.
 The frontend web pages at `/register/` and `/login/` also use these same API endpoints via JavaScript `fetch`.
 
-### Register
+#### Register
 
 ```
-POST /api/auth/register/
-```
-
-**Content-Type:** `application/json`
-
-```json
-{
-  "username": "misty",
-  "password": "staryu123"
-}
-```
-
-Response codes:
-
-- `201 Created` on success
-- `400 Bad Request` when required fields are missing or JSON is invalid
-- `409 Conflict` when username already exists
-
-### Login
-
-```
-POST /api/auth/login/
+POST /api/auth/users/
 ```
 
 **Content-Type:** `application/json`
@@ -45,42 +26,99 @@ POST /api/auth/login/
 }
 ```
 
-Response codes:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | Yes | Desired username |
+| `password` | string | Yes | Password (must pass Django's validators: min 8 chars, not common, not entirely numeric) |
 
-- `200 OK` on success
-- `400 Bad Request` when required fields are missing or JSON is invalid
-- `401 Unauthorized` for invalid credentials
+**Response Codes:**
 
-The following protected endpoints require a logged-in user:
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `201 Created` | Account created | `{"message": "Registration successful", "username": "misty"}` |
+| `400 Bad Request` | Missing fields, invalid JSON, or weak password | `{"error": "<message>"}` |
+| `409 Conflict` | Username already exists | `{"error": "Username already exists"}` |
 
-- `POST /api/team/create/`
-- `PUT /api/team/<id>/edit/`
-- `DELETE /api/team/<id>/delete/`
+---
 
-If a request is made without being logged in, the API returns:
+#### Login
+
+```
+POST /api/auth/sessions/
+```
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "username": "misty",
+  "password": "staryu123"
+}
+```
+
+**Response Codes:**
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Logged in, session cookie set | `{"message": "Login successful", "username": "misty"}` |
+| `400 Bad Request` | Missing fields or invalid JSON | `{"error": "<message>"}` |
+| `401 Unauthorized` | Invalid credentials | `{"error": "Invalid username or password"}` |
+
+---
+
+#### Logout
+
+```
+POST /api/auth/sessions/logout/
+```
+
+Destroys the current session. Requires authentication.
+
+**Response Codes:**
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `200 OK` | Logged out | `{"message": "Logout successful"}` |
+| `401 Unauthorized` | Not logged in | `{"error": "Authentication credentials were not provided"}` |
+
+---
+
+### Protected Endpoints
+
+The following endpoints require a logged-in user (session cookie). If a request is made without authentication, the API returns:
 
 - `401 Unauthorized`
 - `{"error": "Authentication credentials were not provided"}`
 
-### Get All Pokémon
+Protected endpoints:
+- `POST /api/teams/`
+- `PUT /api/teams/<id>/`
+- `DELETE /api/teams/<id>/`
+- `POST /api/auth/sessions/logout/`
+
+---
+
+### Get All Pokemon
 
 ```
 GET /api/pokemon/
 ```
 
-Returns a list of all Pokémon with their stats, types, abilities, and type matchup multipliers.
+Returns a list of all Pokemon with their stats, types, abilities, and type matchup multipliers.
 
-Optional query parameters:
+#### Query Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `sort_type` | string | Filter Pokémon to only those matching a single type (e.g. `fire`). |
-| `sort_types` | comma-separated strings | Filter Pokémon to only those matching all listed types (e.g. `fire,flying`). |
+| `sort_type` | string | Filter Pokemon to only those matching a single type (e.g. `fire`). |
+| `sort_types` | comma-separated strings | Filter Pokemon to only those matching **all** listed types (e.g. `fire,flying`). |
+| `limit` | integer | Maximum number of results to return (must be >= 1). |
+| `offset` | integer | Number of results to skip (must be >= 0, default `0`). |
 
 Example:
 
 ```
-GET /api/pokemon/?sort_types=fire,flying
+GET /api/pokemon/?sort_types=fire,flying&limit=10&offset=0
 ```
 
 #### Response Format
@@ -89,36 +127,39 @@ GET /api/pokemon/?sort_types=fire,flying
 
 ```json
 {
+  "count": 801,
+  "limit": 10,
+  "offset": 0,
   "pokemon": [
     {
-      "id": int,
-      "name": string,
-      "types": [string],
-      "abilities": [string],
-      "hp": int,
-      "attack": int,
-      "defense": int,
-      "special_attack": int,
-      "special_defense": int,
-      "speed": int,
-      "against_bug": float,
-      "against_dark": float,
-      "against_dragon": float,
-      "against_electric": float,
-      "against_fairy": float,
-      "against_fighting": float,
-      "against_fire": float,
-      "against_flying": float,
-      "against_ghost": float,
-      "against_grass": float,
-      "against_ground": float,
-      "against_ice": float,
-      "against_normal": float,
-      "against_poison": float,
-      "against_psychic": float,
-      "against_rock": float,
-      "against_steel": float,
-      "against_water": float
+      "id": 1,
+      "name": "Bulbasaur",
+      "types": ["Grass", "Poison"],
+      "abilities": ["Overgrow", "Chlorophyll"],
+      "hp": 45,
+      "attack": 49,
+      "defense": 49,
+      "special_attack": 65,
+      "special_defense": 65,
+      "speed": 45,
+      "against_bug": 1.0,
+      "against_dark": 1.0,
+      "against_dragon": 1.0,
+      "against_electric": 0.5,
+      "against_fairy": 0.5,
+      "against_fighting": 0.5,
+      "against_fire": 2.0,
+      "against_flying": 2.0,
+      "against_ghost": 1.0,
+      "against_grass": 0.25,
+      "against_ground": 1.0,
+      "against_ice": 2.0,
+      "against_normal": 1.0,
+      "against_poison": 1.0,
+      "against_psychic": 2.0,
+      "against_rock": 1.0,
+      "against_steel": 1.0,
+      "against_water": 0.5
     }
   ]
 }
@@ -128,76 +169,31 @@ GET /api/pokemon/?sort_types=fire,flying
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | integer | Unique identifier for the Pokémon |
-| `name` | string | Name of the Pokémon |
-| `types` | array of strings | The Pokémon's type(s) |
-| `abilities` | array of strings | The Pokémon's abilities |
-| `hp` | integer | Hit Points stat |
-| `attack` | integer | Attack stat |
-| `defense` | integer | Defense stat |
-| `special_attack` | integer | Special Attack stat |
-| `special_defense` | integer | Special Defense stat |
-| `speed` | integer | Speed stat |
-| `against_*` | float | Damage multiplier against the specified type (e.g. `2.0` = double damage, `0.5` = half damage) |
+| `count` | integer | Total number of matching Pokemon (before pagination) |
+| `limit` | integer or null | The limit applied, or `null` if no limit was set |
+| `offset` | integer | The offset applied |
+| `pokemon` | array | List of Pokemon objects |
+| `pokemon[].id` | integer | Unique identifier |
+| `pokemon[].name` | string | Pokemon name |
+| `pokemon[].types` | array of strings | The Pokemon's type(s) |
+| `pokemon[].abilities` | array of strings | The Pokemon's abilities |
+| `pokemon[].hp` | integer | Hit Points stat |
+| `pokemon[].attack` | integer | Attack stat |
+| `pokemon[].defense` | integer | Defense stat |
+| `pokemon[].special_attack` | integer | Special Attack stat |
+| `pokemon[].special_defense` | integer | Special Defense stat |
+| `pokemon[].speed` | integer | Speed stat |
+| `pokemon[].against_*` | float | Damage multiplier against the specified type (e.g. `2.0` = double damage, `0.5` = half damage) |
 
 #### Response Codes
 
 | Status Code | Description |
 |-------------|-------------|
-| `200 OK` | Successfully retrieved Pokémon data |
-| `400 Bad Request` | Unknown type(s) provided in filter parameter |
+| `200 OK` | Successfully retrieved Pokemon data |
+| `400 Bad Request` | Unknown type(s), or invalid `limit`/`offset` value |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
-| `500 Internal Server Error` | An unexpected server error occurred |
 
-### Create a Pokémon Team
-
-```
-POST /api/team/create/
-```
-
-Creates a new Pokémon team with 6 Pokémon. The team is automatically assigned to the authenticated user as its owner.
-
-#### Request Format
-
-**Content-Type:** `application/json`
-
-```json
-{
-  "name": string,
-  "public": bool,
-  "pokemon_1": int,
-  "pokemon_2": int,
-  "pokemon_3": int,
-  "pokemon_4": int,
-  "pokemon_5": int,
-  "pokemon_6": int
-}
-```
-
-#### Request Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Unique name for the team |
-| `public` | boolean | No | Whether the team is publicly visible. Defaults to `false` if omitted. |
-| `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
-| `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
-| `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |
-| `pokemon_4` | integer | Yes | ID of the 4th Pokémon |
-| `pokemon_5` | integer | Yes | ID of the 5th Pokémon |
-| `pokemon_6` | integer | Yes | ID of the 6th Pokémon |
-
-#### Response Codes
-
-| Status Code | Description | Response Body |
-|-------------|-------------|---------------|
-| `201 Created` | Team successfully created | Empty |
-| `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
-| `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
-| `404 Not Found` | A referenced Pokémon ID does not exist | `{"error": "Pokemon with id <id> does not exist"}` |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `POST` is supported) | Empty |
-| `409 Conflict` | A team with the given name already exists | `{"error": "A team with this name already exists"}` |
-| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+---
 
 ### Get All Teams
 
@@ -205,7 +201,7 @@ Creates a new Pokémon team with 6 Pokémon. The team is automatically assigned 
 GET /api/teams/
 ```
 
-Returns a list of all Pokémon teams, including visibility, owner, and team members.
+Returns a list of Pokemon teams. **Authenticated users** see all public teams plus their own private teams. **Unauthenticated users** see only public teams.
 
 #### Response Format
 
@@ -215,17 +211,17 @@ Returns a list of all Pokémon teams, including visibility, owner, and team memb
 {
   "teams": [
     {
-      "id": int,
-      "name": string,
-      "public": bool,
-      "owner": string | null,
+      "id": 1,
+      "name": "My Fire Team",
+      "public": true,
+      "owner": "misty",
       "pokemon": [
-        {"id": int, "name": string},
-        {"id": int, "name": string},
-        {"id": int, "name": string},
-        {"id": int, "name": string},
-        {"id": int, "name": string},
-        {"id": int, "name": string}
+        {"id": 4, "name": "Charmander"},
+        {"id": 5, "name": "Charmeleon"},
+        {"id": 6, "name": "Charizard"},
+        {"id": 37, "name": "Vulpix"},
+        {"id": 38, "name": "Ninetales"},
+        {"id": 77, "name": "Ponyta"}
       ]
     }
   ]
@@ -236,27 +232,68 @@ Returns a list of all Pokémon teams, including visibility, owner, and team memb
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | integer | Unique identifier for the team |
-| `name` | string | Name of the team |
-| `public` | boolean | Whether the team is publicly visible |
-| `owner` | string or null | Username of the team's owner, or `null` if unowned |
-| `pokemon` | array of objects | The 6 Pokémon in the team, each with `id` (integer) and `name` (string) |
+| `teams` | array | List of team objects |
+| `teams[].id` | integer | Unique identifier for the team |
+| `teams[].name` | string | Name of the team |
+| `teams[].public` | boolean | Whether the team is publicly visible |
+| `teams[].owner` | string or null | Username of the team's owner, or `null` if unowned |
+| `teams[].pokemon` | array of objects | The 6 Pokemon in the team, each with `id` and `name` |
 
 #### Response Codes
 
 | Status Code | Description |
 |-------------|-------------|
 | `200 OK` | Successfully retrieved teams |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
-| `500 Internal Server Error` | An unexpected server error occurred |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method |
 
-### Edit a Pokémon Team
+---
+
+### Get a Single Team
 
 ```
-PUT /api/team/<id>/edit/
+GET /api/teams/<id>/
 ```
 
-Updates an existing Pokémon team's name, members, and visibility. Only the team's owner can edit it.
+Returns a single team by its ID. No authentication required.
+
+#### Response Format
+
+Same structure as a single item in the `GET /api/teams/` response:
+
+```json
+{
+  "id": 1,
+  "name": "My Fire Team",
+  "public": true,
+  "owner": "misty",
+  "pokemon": [
+    {"id": 4, "name": "Charmander"},
+    {"id": 5, "name": "Charmeleon"},
+    {"id": 6, "name": "Charizard"},
+    {"id": 37, "name": "Vulpix"},
+    {"id": 38, "name": "Ninetales"},
+    {"id": 77, "name": "Ponyta"}
+  ]
+}
+```
+
+#### Response Codes
+
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Successfully retrieved team |
+| `404 Not Found` | Team with the given ID does not exist |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method |
+
+---
+
+### Create a Pokemon Team
+
+```
+POST /api/teams/
+```
+
+Creates a new Pokemon team with 6 Pokemon. Requires authentication. The team is automatically assigned to the authenticated user as its owner.
 
 #### Request Format
 
@@ -264,14 +301,65 @@ Updates an existing Pokémon team's name, members, and visibility. Only the team
 
 ```json
 {
-  "name": string,
-  "public": bool,
-  "pokemon_1": int,
-  "pokemon_2": int,
-  "pokemon_3": int,
-  "pokemon_4": int,
-  "pokemon_5": int,
-  "pokemon_6": int
+  "name": "My Fire Team",
+  "public": true,
+  "pokemon_1": 4,
+  "pokemon_2": 5,
+  "pokemon_3": 6,
+  "pokemon_4": 37,
+  "pokemon_5": 38,
+  "pokemon_6": 77
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Unique name for the team |
+| `public` | boolean | No | Whether the team is publicly visible. Defaults to `false` if omitted. |
+| `pokemon_1` | integer | Yes | ID of the 1st Pokemon |
+| `pokemon_2` | integer | Yes | ID of the 2nd Pokemon |
+| `pokemon_3` | integer | Yes | ID of the 3rd Pokemon |
+| `pokemon_4` | integer | Yes | ID of the 4th Pokemon |
+| `pokemon_5` | integer | Yes | ID of the 5th Pokemon |
+| `pokemon_6` | integer | Yes | ID of the 6th Pokemon |
+
+#### Response Codes
+
+| Status Code | Description | Response Body |
+|-------------|-------------|---------------|
+| `201 Created` | Team successfully created | `{"id": 1, "name": "My Fire Team"}` |
+| `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
+| `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
+| `404 Not Found` | A referenced Pokemon ID does not exist | `{"error": "Pokemon with id <id> does not exist"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method | |
+| `409 Conflict` | A team with the given name already exists | `{"error": "A team with this name already exists"}` |
+
+---
+
+### Edit a Pokemon Team
+
+```
+PUT /api/teams/<id>/
+```
+
+Updates an existing Pokemon team. Requires authentication. Only the team's owner can edit it.
+
+#### Request Format
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "name": "My Fire Team v2",
+  "public": false,
+  "pokemon_1": 4,
+  "pokemon_2": 5,
+  "pokemon_3": 6,
+  "pokemon_4": 37,
+  "pokemon_5": 38,
+  "pokemon_6": 77
 }
 ```
 
@@ -281,22 +369,12 @@ Updates an existing Pokémon team's name, members, and visibility. Only the team
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique name for the team |
 | `public` | boolean | No | Whether the team is publicly visible. If omitted, current value is kept. |
-| `pokemon_1` | integer | Yes | ID of the 1st Pokémon |
-| `pokemon_2` | integer | Yes | ID of the 2nd Pokémon |
-| `pokemon_3` | integer | Yes | ID of the 3rd Pokémon |
-| `pokemon_4` | integer | Yes | ID of the 4th Pokémon |
-| `pokemon_5` | integer | Yes | ID of the 5th Pokémon |
-| `pokemon_6` | integer | Yes | ID of the 6th Pokémon |
-
-#### Response Format
-
-**Content-Type:** `application/json`
-
-```json
-{
-  "message": "Team updated successfully"
-}
-```
+| `pokemon_1` | integer | Yes | ID of the 1st Pokemon |
+| `pokemon_2` | integer | Yes | ID of the 2nd Pokemon |
+| `pokemon_3` | integer | Yes | ID of the 3rd Pokemon |
+| `pokemon_4` | integer | Yes | ID of the 4th Pokemon |
+| `pokemon_5` | integer | Yes | ID of the 5th Pokemon |
+| `pokemon_6` | integer | Yes | ID of the 6th Pokemon |
 
 #### Response Codes
 
@@ -306,37 +384,39 @@ Updates an existing Pokémon team's name, members, and visibility. Only the team
 | `400 Bad Request` | Invalid JSON, missing fields, or invalid field values | `{"error": "<message>"}` |
 | `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
 | `403 Forbidden` | Authenticated user is not the team's owner | `{"error": "You do not have permission to edit this team"}` |
-| `404 Not Found` | Team or referenced Pokémon ID does not exist | `{"error": "<message>"}` |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `PUT` is supported) | Empty |
+| `404 Not Found` | Team or referenced Pokemon ID does not exist | `{"error": "<message>"}` |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method | |
 | `409 Conflict` | Another team with the given name already exists | `{"error": "A team with this name already exists"}` |
-| `500 Internal Server Error` | An unexpected server error occurred | Empty |
 
-### Delete a Pokémon Team
+---
+
+### Delete a Pokemon Team
 
 ```
-DELETE /api/team/<id>/delete/
+DELETE /api/teams/<id>/
 ```
 
-Deletes a Pokémon team. Only the team's owner can delete it.
+Deletes a Pokemon team. Requires authentication. Only the team's owner can delete it.
 
 #### Response Codes
 
 | Status Code | Description | Response Body |
 |-------------|-------------|---------------|
-| `200 OK` | Team successfully deleted | `{"message": "Team deleted successfully"}` |
+| `204 No Content` | Team successfully deleted | Empty |
 | `401 Unauthorized` | User is not logged in | `{"error": "Authentication credentials were not provided"}` |
 | `403 Forbidden` | Authenticated user is not the team's owner | `{"error": "You do not have permission to delete this team"}` |
 | `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `DELETE` is supported) | Empty |
-| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method | |
+
+---
 
 ### Analyse Team Effectiveness
 
 ```
-GET /api/team/<id>/analysis/
+GET /api/teams/<id>/analysis/
 ```
 
-Analyses a team's effectiveness against each of the 18 Pokémon types by aggregating the `against_*` multipliers of all 6 team members.
+Analyses a team's effectiveness against each of the 18 Pokemon types by aggregating the `against_*` multipliers of all 6 team members.
 
 #### Response Format
 
@@ -344,28 +424,28 @@ Analyses a team's effectiveness against each of the 18 Pokémon types by aggrega
 
 ```json
 {
-  "team": string,
-  "members": [string],
+  "team": "My Fire Team",
+  "members": ["Charmander", "Charmeleon", "Charizard", "Vulpix", "Ninetales", "Ponyta"],
   "member_details": [
     {
-      "name": string,
-      "types": [string],
-      "attack": int,
-      "special_attack": int,
-      "attack_style": string
+      "name": "Charmander",
+      "types": ["Fire"],
+      "attack": 52,
+      "special_attack": 60,
+      "attack_style": "special"
     }
   ],
   "type_analysis": {
-    "<type>": {
-      "pokemon_multipliers": [{"name": string, "multiplier": float}],
-      "average_multiplier": float,
-      "best_pokemon": {"name": string, "multiplier": float},
-      "worst_pokemon": {"name": string, "multiplier": float},
-      "rating": string
+    "bug": {
+      "pokemon_multipliers": [{"name": "Charmander", "multiplier": 0.5}],
+      "average_multiplier": 0.583,
+      "best_pokemon": {"name": "Charmander", "multiplier": 0.5},
+      "worst_pokemon": {"name": "Ponyta", "multiplier": 1.0},
+      "rating": "resistant"
     }
   },
-  "strengths": [string],
-  "weaknesses": [string]
+  "strengths": ["bug", "fairy", "fire", "grass", "ice", "steel"],
+  "weaknesses": ["ground", "rock", "water"]
 }
 ```
 
@@ -374,33 +454,34 @@ Analyses a team's effectiveness against each of the 18 Pokémon types by aggrega
 | Field | Type | Description |
 |-------|------|-------------|
 | `team` | string | Name of the team |
-| `members` | array of strings | Names of the 6 Pokémon in the team |
+| `members` | array of strings | Names of the 6 Pokemon in the team |
 | `member_details` | array of objects | Per-member stats including types, attack values, and attack style (`physical`, `special`, or `mixed`) |
 | `type_analysis` | object | Per-type breakdown (keys are type names, e.g. `bug`, `fire`) |
 | `type_analysis.<type>.pokemon_multipliers` | array | Each team member's damage multiplier against this type |
 | `type_analysis.<type>.average_multiplier` | float | Mean multiplier across all 6 members (rounded to 3 d.p.) |
 | `type_analysis.<type>.best_pokemon` | object | Team member with the lowest (most resistant) multiplier |
 | `type_analysis.<type>.worst_pokemon` | object | Team member with the highest (most vulnerable) multiplier |
-| `type_analysis.<type>.rating` | string | One of: `very resistant` (≤0.5), `resistant` (≤1.0), `neutral` (≤1.5), `vulnerable` (≤2.0), `very vulnerable` (>2.0) |
+| `type_analysis.<type>.rating` | string | One of: `very resistant` (avg <= 0.5), `resistant` (avg <= 1.0), `neutral` (avg <= 1.5), `vulnerable` (avg <= 2.0), `very vulnerable` (avg > 2.0) |
 | `strengths` | array of strings | Types the team is resistant to (avg < 1.0), sorted best first |
 | `weaknesses` | array of strings | Types the team is vulnerable to (avg > 1.0), sorted worst first |
 
 #### Response Codes
 
-| Status Code | Description | Response Body |
-|-------------|-------------|---------------|
-| `200 OK` | Analysis successfully computed | See response format above |
-| `404 Not Found` | Team with the given ID does not exist | `{"error": "Team not found"}` |
-| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) | Empty |
-| `500 Internal Server Error` | An unexpected server error occurred | Empty |
+| Status Code | Description |
+|-------------|-------------|
+| `200 OK` | Analysis successfully computed |
+| `404 Not Found` | Team with the given ID does not exist |
+| `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
 
-### Top 10 Most Used Pokémon
+---
+
+### Top 10 Most Used Pokemon
 
 ```
 GET /api/stats/top-pokemon/
 ```
 
-Returns the top 10 Pokémon most frequently added to team slots across all teams.
+Returns the top 10 Pokemon most frequently added to team slots across all teams.
 
 #### Response Format
 
@@ -410,9 +491,9 @@ Returns the top 10 Pokémon most frequently added to team slots across all teams
 {
   "top_pokemon": [
     {
-      "pokemon_id": int,
-      "name": string,
-      "times_used": int
+      "pokemon_id": 6,
+      "name": "Charizard",
+      "times_used": 15
     }
   ]
 }
@@ -424,15 +505,16 @@ Returns the top 10 Pokémon most frequently added to team slots across all teams
 |-------------|-------------|
 | `200 OK` | Successfully retrieved usage data |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
-| `500 Internal Server Error` | An unexpected server error occurred |
 
-### Most Used Pokémon Types
+---
+
+### Most Used Pokemon Types
 
 ```
 GET /api/stats/top-types/
 ```
 
-Returns Pokémon types sorted by how often they appear in team slots (highest first).
+Returns Pokemon types sorted by how often they appear in team slots (highest first).
 
 #### Response Format
 
@@ -442,8 +524,8 @@ Returns Pokémon types sorted by how often they appear in team slots (highest fi
 {
   "type_usage": [
     {
-      "type": string,
-      "times_used": int
+      "type": "Water",
+      "times_used": 42
     }
   ]
 }
@@ -455,15 +537,20 @@ Returns Pokémon types sorted by how often they appear in team slots (highest fi
 |-------------|-------------|
 | `200 OK` | Successfully retrieved type usage data |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method (only `GET` is supported) |
-| `500 Internal Server Error` | An unexpected server error occurred |
 
-## Pages
+---
 
-| Route | Description |
-|-------|-------------|
-| `/pokemon/` | Web page displaying all Pokémon in a searchable table |
-| `/teams/` | Web page displaying all created Pokémon teams |
-| `/team/create/` | Web page for creating a new Pokémon team |
-| `/team/<id>/edit/` | Web page for editing an existing Pokémon team |
-| `/team/<id>/analysis/` | Web page showing the team's type effectiveness analysis |
-| `/admin/` | Django admin panel |
+## Frontend Pages
+
+| Route | Auth Required | Description |
+|-------|---------------|-------------|
+| `/` | No | Homepage displaying public teams |
+| `/login/` | No | Login page (redirects if already authenticated) |
+| `/register/` | No | Registration page (redirects if already authenticated) |
+| `/pokemon/` | No | Searchable, filterable Pokemon table |
+| `/team/create/` | Yes | Create a new Pokemon team |
+| `/team/<id>/edit/` | Yes | Edit an existing Pokemon team |
+| `/team/<id>/analysis/` | No | Team type effectiveness analysis |
+| `/teams/` | Yes | View and manage your teams |
+| `/global-stats/` | No | Top Pokemon and type usage statistics |
+| `/admin/` | Yes (staff) | Django admin panel |
