@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from functools import wraps
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -100,6 +100,15 @@ def login_api(request):
 
     login(request, user)
     return JsonResponse({'message': 'Login successful', 'username': user.username}, status=200)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@api_login_required
+def logout_api(request):
+    """Destroy the current session via API."""
+    logout(request)
+    return JsonResponse({'message': 'Logout successful'}, status=200)
 
 
 @require_http_methods(["GET"])
