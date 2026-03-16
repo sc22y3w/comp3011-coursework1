@@ -2,13 +2,13 @@ from django.contrib.auth.models import User
 from django.db import models
 
 class PokemonType(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
-      
+
 class Ability(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
@@ -51,12 +51,12 @@ class PokemonTeam(models.Model):
     name = models.CharField(max_length=100, unique=True)
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='teams')
     public = models.BooleanField(default=False)
-    pokemon_1 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_1')
-    pokemon_2 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_2')
-    pokemon_3 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_3')
-    pokemon_4 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_4')
-    pokemon_5 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_5')
-    pokemon_6 = models.ForeignKey(Pokemon, on_delete=models.CASCADE, related_name='team_slot_6')
+    pokemon_1 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_1')
+    pokemon_2 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_2')
+    pokemon_3 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_3')
+    pokemon_4 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_4')
+    pokemon_5 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_5')
+    pokemon_6 = models.ForeignKey(Pokemon, on_delete=models.PROTECT, related_name='team_slot_6')
 
     def __str__(self):
         return self.name
