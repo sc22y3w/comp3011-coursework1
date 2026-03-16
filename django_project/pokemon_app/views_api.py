@@ -134,6 +134,28 @@ def pokemon_api(request):
     else:
         queryset = queryset.order_by('id')
 
+    total_count = queryset.count()
+
+    limit = request.GET.get('limit')
+    offset = request.GET.get('offset', '0')
+    try:
+        offset = int(offset)
+        if offset < 0:
+            return JsonResponse({'error': 'offset must be a non-negative integer'}, status=400)
+    except ValueError:
+        return JsonResponse({'error': 'offset must be a non-negative integer'}, status=400)
+
+    if limit is not None:
+        try:
+            limit = int(limit)
+            if limit < 1:
+                return JsonResponse({'error': 'limit must be a positive integer'}, status=400)
+        except ValueError:
+            return JsonResponse({'error': 'limit must be a positive integer'}, status=400)
+        queryset = queryset[offset:offset + limit]
+    else:
+        queryset = queryset[offset:]
+
     pokemon_list = []
     for p in queryset:
         pokemon_list.append({
@@ -166,7 +188,12 @@ def pokemon_api(request):
             'against_steel': p.against_steel,
             'against_water': p.against_water,
         })
-    return JsonResponse({'pokemon': pokemon_list})
+    return JsonResponse({
+        'count': total_count,
+        'limit': limit,
+        'offset': offset,
+        'pokemon': pokemon_list,
+    })
 
 
 @csrf_exempt
