@@ -152,7 +152,7 @@ def pokemon_api(request):
             'against_dragon': p.against_dragon,
             'against_electric': p.against_electric,
             'against_fairy': p.against_fairy,
-            'against_fight': p.against_fight,
+            'against_fighting': p.against_fighting,
             'against_fire': p.against_fire,
             'against_flying': p.against_flying,
             'against_ghost': p.against_ghost,
@@ -323,7 +323,7 @@ def team_analysis_api(request, team_id):
         return JsonResponse({'error': 'Team not found'}, status=404)
 
     TYPES = [
-        'bug', 'dark', 'dragon', 'electric', 'fairy', 'fight',
+        'bug', 'dark', 'dragon', 'electric', 'fairy', 'fighting',
         'fire', 'flying', 'ghost', 'grass', 'ground', 'ice',
         'normal', 'poison', 'psychic', 'rock', 'steel', 'water',
     ]

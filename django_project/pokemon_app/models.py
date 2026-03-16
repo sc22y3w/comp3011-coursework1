@@ -22,7 +22,7 @@ class Pokemon(models.Model):
     against_dragon = models.FloatField(default=1.0)
     against_electric = models.FloatField(default=1.0)
     against_fairy = models.FloatField(default=1.0)
-    against_fight = models.FloatField(default=1.0)
+    against_fighting = models.FloatField(default=1.0)
     against_fire = models.FloatField(default=1.0)
     against_flying = models.FloatField(default=1.0)
     against_ghost = models.FloatField(default=1.0)

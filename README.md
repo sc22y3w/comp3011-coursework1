@@ -106,7 +106,7 @@ GET /api/pokemon/?sort_types=fire,flying
       "against_dragon": float,
       "against_electric": float,
       "against_fairy": float,
-      "against_fight": float,
+      "against_fighting": float,
       "against_fire": float,
       "against_flying": float,
       "against_ghost": float,

@@ -55,7 +55,7 @@ def run():
                 "against_dragon": float(row["against_dragon"]),
                 "against_electric": float(row["against_electric"]),
                 "against_fairy": float(row["against_fairy"]),
-                "against_fight": float(row["against_fight"]),
+                "against_fighting": float(row["against_fight"]),
                 "against_fire": float(row["against_fire"]),
                 "against_flying": float(row["against_flying"]),
                 "against_ghost": float(row["against_ghost"]),
