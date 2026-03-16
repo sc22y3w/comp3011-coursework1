@@ -3,6 +3,7 @@ from collections import Counter
 from functools import wraps
 
 from django.contrib.auth import authenticate, login
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -101,6 +102,7 @@ def login_api(request):
     return JsonResponse({'message': 'Login successful', 'username': user.username}, status=200)
 
 
+@require_http_methods(["GET"])
 def pokemon_api(request):
     """API endpoint that returns all Pokemon data as JSON."""
     queryset = Pokemon.objects.prefetch_related('type', 'abilities').all()
@@ -211,12 +213,17 @@ def create_team_api(request):
     return HttpResponse(status=201)
 
 
+@require_http_methods(["GET"])
 def teams_api(request):
     """API endpoint that returns all teams as JSON."""
     teams = PokemonTeam.objects.select_related(
         'pokemon_1', 'pokemon_2', 'pokemon_3',
         'pokemon_4', 'pokemon_5', 'pokemon_6',
-    ).all()
+    )
+    if request.user.is_authenticated:
+        teams = teams.filter(Q(public=True) | Q(owner=request.user))
+    else:
+        teams = teams.filter(public=True)
     team_list = []
     for t in teams:
         team_list.append({
@@ -306,6 +313,7 @@ def delete_team_api(request, team_id):
     return JsonResponse({'message': 'Team deleted successfully'})
 
 
+@require_http_methods(["GET"])
 def team_analysis_api(request, team_id):
     """API endpoint that analyses a team's effectiveness against each Pokemon type.
 
@@ -396,6 +404,7 @@ def team_analysis_api(request, team_id):
     })
 
 
+@require_http_methods(["GET"])
 def top_pokemon_usage_api(request):
     """API endpoint that returns the top 10 most-used Pokemon in all teams."""
     slot_fields = [
@@ -432,6 +441,7 @@ def top_pokemon_usage_api(request):
     })
 
 
+@require_http_methods(["GET"])
 def top_type_usage_api(request):
     """API endpoint that returns Pokemon types sorted by total usage in all teams."""
     slot_fields = [
