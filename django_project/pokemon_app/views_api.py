@@ -259,11 +259,45 @@ def teams_api(request):
     teams = PokemonTeam.objects.select_related(
         'pokemon_1', 'pokemon_2', 'pokemon_3',
         'pokemon_4', 'pokemon_5', 'pokemon_6',
+    ).prefetch_related(
+        'pokemon_1__type', 'pokemon_2__type', 'pokemon_3__type',
+        'pokemon_4__type', 'pokemon_5__type', 'pokemon_6__type',
     )
     if request.user.is_authenticated:
         teams = teams.filter(Q(public=True) | Q(owner=request.user))
     else:
         teams = teams.filter(public=True)
+
+    # Filter teams by pokemon types — team must collectively cover every requested type
+    types_raw = request.GET.get('types')
+    if types_raw:
+        requested_types = list(dict.fromkeys(
+            t.strip().lower() for t in types_raw.split(',') if t.strip()
+        ))
+        if not requested_types:
+            return JsonResponse({'error': 'types must contain at least one type name'}, status=400)
+
+        available_types = list(PokemonType.objects.values_list('name', flat=True).order_by('name'))
+        available_by_normalized = {t.lower(): t for t in available_types}
+        unknown_types = sorted({t for t in requested_types if t not in available_by_normalized})
+        if unknown_types:
+            return JsonResponse(
+                {
+                    'error': f"Unknown type(s): {', '.join(unknown_types)}",
+                    'valid_types': available_types,
+                },
+                status=400,
+            )
+
+        # For each requested type, the team must have at least one pokemon with that type
+        for type_name in requested_types:
+            slot_q = Q()
+            for i in range(1, 7):
+                slot_q |= Q(**{f'pokemon_{i}__type__name__iexact': type_name})
+            teams = teams.filter(slot_q)
+
+        teams = teams.distinct()
+
     team_list = []
     for t in teams:
         team_list.append({
@@ -272,7 +306,11 @@ def teams_api(request):
             'public': t.public,
             'owner': t.owner.username if t.owner else None,
             'pokemon': [
-                {'id': getattr(t, f'pokemon_{i}').id, 'name': getattr(t, f'pokemon_{i}').name}
+                {
+                    'id': getattr(t, f'pokemon_{i}').id,
+                    'name': getattr(t, f'pokemon_{i}').name,
+                    'types': [pt.name for pt in getattr(t, f'pokemon_{i}').type.all()],
+                }
                 for i in range(1, 7)
             ],
         })

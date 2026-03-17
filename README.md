@@ -203,6 +203,18 @@ GET /api/teams/
 
 Returns a list of Pokemon teams. **Authenticated users** see all public teams plus their own private teams. **Unauthenticated users** see only public teams.
 
+#### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `types` | comma-separated strings | Filter teams to only those whose Pokemon collectively cover **all** listed types. For example, `types=fire,water,fairy` returns teams that have at least one Fire-type Pokemon, at least one Water-type Pokemon, **and** at least one Fairy-type Pokemon — they do not need to be the same Pokemon. |
+
+Example:
+
+```
+GET /api/teams/?types=fire,water,fairy
+```
+
 #### Response Format
 
 **Content-Type:** `application/json`
@@ -216,12 +228,12 @@ Returns a list of Pokemon teams. **Authenticated users** see all public teams pl
       "public": true,
       "owner": "misty",
       "pokemon": [
-        {"id": 4, "name": "Charmander"},
-        {"id": 5, "name": "Charmeleon"},
-        {"id": 6, "name": "Charizard"},
-        {"id": 37, "name": "Vulpix"},
-        {"id": 38, "name": "Ninetales"},
-        {"id": 77, "name": "Ponyta"}
+        {"id": 4, "name": "Charmander", "types": ["Fire"]},
+        {"id": 5, "name": "Charmeleon", "types": ["Fire"]},
+        {"id": 6, "name": "Charizard", "types": ["Fire", "Flying"]},
+        {"id": 37, "name": "Vulpix", "types": ["Fire"]},
+        {"id": 38, "name": "Ninetales", "types": ["Fire"]},
+        {"id": 77, "name": "Ponyta", "types": ["Fire"]}
       ]
     }
   ]
@@ -237,13 +249,15 @@ Returns a list of Pokemon teams. **Authenticated users** see all public teams pl
 | `teams[].name` | string | Name of the team |
 | `teams[].public` | boolean | Whether the team is publicly visible |
 | `teams[].owner` | string or null | Username of the team's owner, or `null` if unowned |
-| `teams[].pokemon` | array of objects | The 6 Pokemon in the team, each with `id` and `name` |
+| `teams[].pokemon` | array of objects | The 6 Pokemon in the team, each with `id`, `name`, and `types` |
+| `teams[].pokemon[].types` | array of strings | The Pokemon's type(s) |
 
 #### Response Codes
 
 | Status Code | Description |
 |-------------|-------------|
 | `200 OK` | Successfully retrieved teams |
+| `400 Bad Request` | Unknown type(s) in the `types` parameter (response includes `valid_types` list) |
 | `405 Method Not Allowed` | Request used an unsupported HTTP method |
 
 ---

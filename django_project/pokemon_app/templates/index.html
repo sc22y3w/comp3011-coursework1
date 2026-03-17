@@ -5,6 +5,38 @@
 {% block content %}
 <h1 class="mb-4">Public Pokémon Teams</h1>
 
+<div class="row g-3 align-items-end mb-3">
+	<div class="col-md-6">
+		<label for="searchInput" class="form-label">Search</label>
+		<input type="text" id="searchInput" class="form-control" placeholder="Search teams by name...">
+	</div>
+	<div class="col-md-6">
+		<label for="typeFilterButton" class="form-label">Filter by Type</label>
+		<div class="form-text">Select one or more types. Teams must collectively cover all selected types.</div>
+		<div class="dropdown">
+			<button
+				class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+				type="button"
+				id="typeFilterButton"
+				data-bs-toggle="dropdown"
+				data-bs-auto-close="outside"
+				aria-expanded="false"
+			>
+				All Types
+			</button>
+			<ul class="dropdown-menu w-100 p-2" id="typeFilterMenu">
+				<li>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" value="__all__" id="typeFilterAll" checked>
+						<label class="form-check-label" for="typeFilterAll">All Types</label>
+					</div>
+				</li>
+				<li><hr class="dropdown-divider"></li>
+			</ul>
+		</div>
+	</div>
+</div>
+
 <div id="publicTeamsContainer">
 	<p>Loading public teams...</p>
 </div>
@@ -13,7 +45,13 @@
 {% block extra_js %}
 <script>
 	document.addEventListener('DOMContentLoaded', function () {
+		const ALL_TYPES_VALUE = '__all__';
 		const container = document.getElementById('publicTeamsContainer');
+		const searchInput = document.getElementById('searchInput');
+		const typeFilterMenu = document.getElementById('typeFilterMenu');
+		const typeFilterButton = document.getElementById('typeFilterButton');
+
+		let currentTeams = [];
 
 		function renderTypeBadges(types) {
 			if (!types || types.length === 0) {
@@ -24,51 +62,161 @@
 			).join(' ');
 		}
 
-		Promise.all([
-			fetch('/api/teams/').then(response => response.json()),
-			fetch('/api/pokemon/').then(response => response.json()),
-		])
-			.then(([teamsData, pokemonData]) => {
-				const publicTeams = (teamsData.teams || []).filter(team => team.public);
-				const pokemonTypeMap = {};
-				(pokemonData.pokemon || []).forEach(pokemon => {
-					pokemonTypeMap[pokemon.id] = pokemon.types || [];
+		function getSelectedTypes() {
+			return Array.from(typeFilterMenu.querySelectorAll('input[type="checkbox"]:checked'))
+				.map(checkbox => checkbox.value);
+		}
+
+		function getCheckedTypeLabels() {
+			return Array.from(typeFilterMenu.querySelectorAll('input[type="checkbox"]:checked'))
+				.filter(checkbox => checkbox.value !== ALL_TYPES_VALUE)
+				.map(checkbox => checkbox.dataset.label || checkbox.value);
+		}
+
+		function updateTypeFilterButtonLabel() {
+			const labels = getCheckedTypeLabels();
+			typeFilterButton.textContent = labels.length ? labels.join(', ') : 'All Types';
+		}
+
+		function onTypeFilterChange(event) {
+			const changedCheckbox = event.target;
+			if (!changedCheckbox || changedCheckbox.type !== 'checkbox') {
+				return;
+			}
+
+			const allCheckbox = typeFilterMenu.querySelector(`input[value="${ALL_TYPES_VALUE}"]`);
+
+			if (changedCheckbox.value === ALL_TYPES_VALUE && changedCheckbox.checked) {
+				typeFilterMenu.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+					if (checkbox.value !== ALL_TYPES_VALUE) {
+						checkbox.checked = false;
+					}
+				});
+			}
+
+			if (changedCheckbox.value !== ALL_TYPES_VALUE && changedCheckbox.checked) {
+				allCheckbox.checked = false;
+			}
+
+			let selected = getSelectedTypes();
+
+			if (selected.length === 0) {
+				allCheckbox.checked = true;
+				selected = [ALL_TYPES_VALUE];
+			}
+
+			const activeTypes = selected.includes(ALL_TYPES_VALUE) ? [] : selected;
+			updateTypeFilterButtonLabel();
+			loadTeams(activeTypes);
+		}
+
+		function populateTypeFilterOptions(pokemonList) {
+			if (typeFilterMenu.dataset.initialized === 'true') {
+				return;
+			}
+
+			const allTypes = new Set();
+			pokemonList.forEach(pokemon => {
+				pokemon.types.forEach(typeName => allTypes.add(typeName));
+			});
+
+			Array.from(allTypes)
+				.sort((a, b) => a.localeCompare(b))
+				.forEach(typeName => {
+					const li = document.createElement('li');
+					li.innerHTML = `
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="${typeName.toLowerCase()}">
+							<label class="form-check-label">${typeName}</label>
+						</div>
+					`;
+
+					const checkbox = li.querySelector('input');
+					const label = li.querySelector('label');
+					const checkboxId = `typeFilter-${typeName.toLowerCase()}`;
+					checkbox.id = checkboxId;
+					checkbox.dataset.label = typeName;
+					label.setAttribute('for', checkboxId);
+
+					typeFilterMenu.appendChild(li);
 				});
 
-				if (publicTeams.length === 0) {
-					container.innerHTML = '<p>No public teams available yet.</p>';
-					return;
+			typeFilterMenu.dataset.initialized = 'true';
+			updateTypeFilterButtonLabel();
+		}
+
+		async function loadTeams(filterTypes) {
+			const query = filterTypes.length
+				? `?types=${encodeURIComponent(filterTypes.join(','))}`
+				: '';
+
+			try {
+				const response = await fetch(`/api/teams/${query}`);
+				const data = await response.json();
+
+				if (!response.ok) {
+					throw new Error(data.error || 'Failed to load teams.');
 				}
 
-				let html = '';
-				publicTeams.forEach(team => {
-					html += `<div class="card mb-3">
-						<div class="card-header d-flex justify-content-between align-items-center">
-							<strong>${team.name}</strong>
-							<span class="badge bg-success">Public</span>
-						</div>
-						<div class="card-body">
-							<div class="row">`;
+				currentTeams = (data.teams || []).filter(team => team.public);
+				renderTeams();
+			} catch (error) {
+				container.innerHTML = '<div class="alert alert-danger">Failed to load public teams.</div>';
+				console.error('Error fetching teams:', error);
+			}
+		}
 
-					team.pokemon.forEach((p, idx) => {
-						const typesBadges = renderTypeBadges(pokemonTypeMap[p.id]);
-						html += `<div class="col-md-2 text-center mb-2">
-							<span class="badge bg-secondary">Slot ${idx + 1}</span>
-							<p class="mt-1 mb-0">${p.name}</p>
-							<div class="mt-1">${typesBadges}</div>
-						</div>`;
-					});
+		function renderTeams() {
+			const query = searchInput.value.trim().toLowerCase();
+			const filtered = currentTeams.filter(team =>
+				team.name.toLowerCase().includes(query)
+			);
 
-					html += `</div>
-							<a href="/team/${team.id}/analysis/" class="btn btn-sm btn-outline-info mt-2">Analyse Team</a>
-						</div>
+			if (filtered.length === 0) {
+				container.innerHTML = '<p>No public teams found.</p>';
+				return;
+			}
+
+			let html = '';
+			filtered.forEach(team => {
+				html += `<div class="card mb-3">
+					<div class="card-header d-flex justify-content-between align-items-center">
+						<strong>${team.name}</strong>
+						<span class="badge bg-success">Public</span>
+					</div>
+					<div class="card-body">
+						<div class="row">`;
+
+				team.pokemon.forEach((p, idx) => {
+					const typesBadges = renderTypeBadges(p.types);
+					html += `<div class="col-md-2 text-center mb-2">
+						<span class="badge bg-secondary">Slot ${idx + 1}</span>
+						<p class="mt-1 mb-0">${p.name}</p>
+						<div class="mt-1">${typesBadges}</div>
 					</div>`;
 				});
 
-				container.innerHTML = html;
+				html += `</div>
+						<a href="/team/${team.id}/analysis/" class="btn btn-sm btn-outline-info mt-2">Analyse Team</a>
+					</div>
+				</div>`;
+			});
+
+			container.innerHTML = html;
+		}
+
+		searchInput.addEventListener('input', renderTeams);
+		typeFilterMenu.addEventListener('change', onTypeFilterChange);
+
+		// Fetch pokemon types for the filter dropdown, then load teams
+		fetch('/api/pokemon/')
+			.then(response => response.json())
+			.then(data => {
+				populateTypeFilterOptions(data.pokemon || []);
+				loadTeams([]);
 			})
 			.catch(() => {
-				container.innerHTML = '<div class="alert alert-danger">Failed to load public teams.</div>';
+				loadTeams([]);
 			});
 	});
 </script>
