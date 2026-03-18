@@ -298,6 +298,29 @@ def teams_api(request):
 
         teams = teams.distinct()
 
+    teams = teams.order_by('id')
+    total_count = teams.count()
+
+    limit = request.GET.get('limit')
+    offset = request.GET.get('offset', '0')
+    try:
+        offset = int(offset)
+        if offset < 0:
+            return JsonResponse({'error': 'offset must be a non-negative integer'}, status=400)
+    except ValueError:
+        return JsonResponse({'error': 'offset must be a non-negative integer'}, status=400)
+
+    if limit is not None:
+        try:
+            limit = int(limit)
+            if limit < 1:
+                return JsonResponse({'error': 'limit must be a positive integer'}, status=400)
+        except ValueError:
+            return JsonResponse({'error': 'limit must be a positive integer'}, status=400)
+        teams = teams[offset:offset + limit]
+    else:
+        teams = teams[offset:]
+
     team_list = []
     for t in teams:
         team_list.append({
@@ -314,7 +337,12 @@ def teams_api(request):
                 for i in range(1, 7)
             ],
         })
-    return JsonResponse({'teams': team_list})
+    return JsonResponse({
+        'count': total_count,
+        'limit': limit,
+        'offset': offset,
+        'teams': team_list,
+    })
 
 
 @require_http_methods(["GET", "PUT", "DELETE"])
