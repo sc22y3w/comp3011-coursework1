@@ -37,21 +37,6 @@ A Django web application for browsing Pokemon data, building teams, and analysin
    python manage.py migrate
    ```
 
-5. **Import the Pokemon dataset:**
-
-   The `pokemon.csv` file contains 801 Pokemon. Import it into the SQLite database:
-
-   ```bash
-   python import_pokemon.py
-   ```
-
-   This creates `PokemonType`, `Ability`, and `Pokemon` records. The script is idempotent and can be safely re-run.
-
-6. **(Optional) Populate sample teams:**
-
-   ```bash
-   python populate_random_teams.py
-   ```
 
 7. **Run the development server:**
 
@@ -87,4 +72,21 @@ This runs the full API test suite (41 test cases covering authentication, Pokemo
 
 ## API Documentation
 
-Full API documentation — including all endpoints, parameters, request/response formats, example `curl` commands, authentication flow, and error codes — is available in **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)**.
+Full API documentation — including all endpoints, parameters, request/response formats, example `curl` commands, authentication flow, and error codes — is available in **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)**...
+
+## Used Scripts
+1. **Import the Pokemon dataset:**
+
+   The `pokemon.csv` file contains 801 Pokemon. Import it into the SQLite database:
+
+   ```bash
+   python import_pokemon.py
+   ```
+
+   This creates `PokemonType`, `Ability`, and `Pokemon` records. The script is idempotent and can be safely re-run.
+
+2. **Populate sample teams:**
+
+   ```bash
+   python populate_random_teams.py
+   ```
