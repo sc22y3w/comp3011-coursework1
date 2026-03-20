@@ -12,7 +12,7 @@ A Django web application for browsing Pokemon data, building teams, and analysin
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/sc22y3w/comp3011-coursework1.git
    cd comp3011-coursework1
    ```
 
@@ -72,7 +72,7 @@ This runs the full API test suite (41 test cases covering authentication, Pokemo
 
 ## API Documentation
 
-Full API documentation — including all endpoints, parameters, request/response formats, example `curl` commands, authentication flow, and error codes — is available in **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)**...
+Full API documentation — including all endpoints, parameters, request/response formats, example `curl` commands, authentication flow, and error codes — PDF and md file are available in **[this folder](./docs)**.
 
 ## Used Scripts
 1. **Import the Pokemon dataset:**
